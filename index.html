@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#6B8E23">
-  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,46 +13,11 @@
 <title>Bitácora Avícola</title>
 <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  /* ============================================================
-   MODAL DE INPUT
-   ============================================================ */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
-.modal-bg.open{display:flex}
-.modal{background:var(--card);border-radius:16px;padding:22px 20px;max-width:400px;width:100%;animation:pop .25s ease}
-@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
-.modal h3{font-size:17px;font-weight:700;margin-bottom:6px;text-align:center}
-.modal p{font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px}
-.modal input{width:100%;padding:14px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:24px;font-weight:700;text-align:center;outline:none;font-variant-numeric:tabular-nums;transition:.15s}
-.modal input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,142,35,.15)}
-.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.modal-btns button{padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
-.modal-btns .cancel{background:var(--card2);color:var(--text)}
-.modal-btns .confirm{background:var(--primary);color:#fff}
-[data-theme="dark"] .modal-btns .confirm{color:#141414}
-.modal-btns button:active{transform:scale(.97)}
-
-/* ============================================================
-   TUTORIAL
-   ============================================================ */
-.tut-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
-.tut-bg.open{display:flex}
-.tut{background:var(--card);border-radius:20px;padding:30px 22px 22px;max-width:380px;width:100%;text-align:center;animation:pop .3s ease;position:relative}
-.tut .skip{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;font-weight:500;padding:6px 10px;border-radius:8px}
-.tut .skip:active{background:var(--card2)}
-.tut .emoji{font-size:60px;margin-bottom:16px;display:block;line-height:1}
-.tut h3{font-size:19px;font-weight:700;margin-bottom:10px;color:var(--text)}
-.tut p{font-size:14px;color:var(--text2);line-height:1.55;margin-bottom:24px;min-height:66px}
-.tut .dots{display:flex;justify-content:center;gap:6px;margin-bottom:20px}
-.tut .dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:.2s}
-.tut .dot.on{background:var(--primary);width:24px;border-radius:4px}
-.tut-btns{display:flex;gap:10px}
-.tut-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
-.tut-btns .prev{background:var(--card2);color:var(--text)}
-.tut-btns .next{background:var(--primary);color:#fff}
-[data-theme="dark"] .tut-btns .next{color:#141414}
-.tut-btns button:active{transform:scale(.97)}
 :root{
   --primary:#6B8E23; --primary-dark:#4A6318; --primary-light:#8FBF3F;
   --accent:#F5C542;
@@ -229,6 +194,58 @@ input,textarea{user-select:text}
 .empty .big{font-size:48px;margin-bottom:12px;opacity:.3}
 .empty h3{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty p{font-size:13px}
+
+/* MODAL DE INPUT */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:22px 20px;max-width:400px;width:100%;animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:6px;text-align:center}
+.modal p{font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px}
+.modal input{width:100%;padding:14px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:24px;font-weight:700;text-align:center;outline:none;font-variant-numeric:tabular-nums;transition:.15s}
+.modal input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,142,35,.15)}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.modal-btns button{padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
+.modal-btns .cancel{background:var(--card2);color:var(--text)}
+.modal-btns .confirm{background:var(--primary);color:#fff}
+[data-theme="dark"] .modal-btns .confirm{color:#141414}
+.modal-btns button:active{transform:scale(.97)}
+
+/* TUTORIAL */
+.tut-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.tut-bg.open{display:flex}
+.tut{background:var(--card);border-radius:20px;padding:30px 22px 22px;max-width:380px;width:100%;text-align:center;animation:pop .3s ease;position:relative}
+.tut .skip{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;font-weight:500;padding:6px 10px;border-radius:8px}
+.tut .skip:active{background:var(--card2)}
+.tut .emoji{font-size:60px;margin-bottom:16px;display:block;line-height:1}
+.tut h3{font-size:19px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.tut p{font-size:14px;color:var(--text2);line-height:1.55;margin-bottom:24px;min-height:66px}
+.tut .dots{display:flex;justify-content:center;gap:6px;margin-bottom:20px}
+.tut .dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:.2s}
+.tut .dot.on{background:var(--primary);width:24px;border-radius:4px}
+.tut-btns{display:flex;gap:10px}
+.tut-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
+.tut-btns .prev{background:var(--card2);color:var(--text)}
+.tut-btns .next{background:var(--primary);color:#fff}
+[data-theme="dark"] .tut-btns .next{color:#141414}
+.tut-btns button:active{transform:scale(.97)}
+
+/* TABS */
+.tabs{display:flex;background:var(--card2);border-radius:12px;padding:4px;margin-bottom:16px;gap:4px}
+.tab{flex:1;padding:10px;text-align:center;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:transparent;transition:.15s}
+.tab.on{background:var(--card);color:var(--primary);box-shadow:var(--shadow)}
+.chart-wrap{background:var(--card);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px;border:1px solid var(--border)}
+.chart-wrap h4{font-size:12.5px;color:var(--text2);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+.chart-box{height:220px;position:relative}
+
+/* FOTOS */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.photo-item{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--card2);border:1px solid var(--border)}
+.photo-item img{width:100%;height:100%;object-fit:cover}
+.photo-item .del{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);background:var(--card2);cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;gap:4px;padding:6px;text-align:center}
+.photo-add .ic{font-size:22px}
+.photo-add:active{background:var(--border)}
 </style>
 </head>
 <body>
@@ -263,7 +280,7 @@ input,textarea{user-select:text}
 </div>
 
 <div class="toast" id="toast"></div>
-  <!-- MODAL DE INPUT -->
+
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h3 id="modalTitle">Título</h3>
@@ -276,7 +293,6 @@ input,textarea{user-select:text}
   </div>
 </div>
 
-<!-- TUTORIAL -->
 <div class="tut-bg" id="tutBg">
   <div class="tut">
     <button class="skip" id="tutSkip">Saltar</button>
@@ -319,14 +335,13 @@ const DEFAULT_LOTES = [
 
 let state = null;
 
-/* ---------- CARGA INICIAL ---------- */
 async function inicializarDB(){
   const count = await db.lotes.count();
   if(count === 0){
     await db.lotes.bulkPut(DEFAULT_LOTES);
     await db.meta.put({key:'loteActual', value:'g3'});
     await db.meta.put({key:'ajustes', value:{
-      dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1
+      dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1, notifActivas:false, notifHora:8
     }});
   }
 }
@@ -355,12 +370,12 @@ async function cargarDesdeDexie(){
     loteActual: meta.loteActual || 'g3',
     registros,
     eventos,
-    ajustes: meta.ajustes || { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1 },
+    ajustes: meta.ajustes || { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1, notifActivas:false, notifHora:8 },
+    tutorialVisto: meta.tutorialVisto || false,
     _lastSaved: meta._lastSaved || 0
   };
 }
 
-/* ---------- GUARDADO EN DEXIE ---------- */
 let saving = false, savePending = false;
 async function guardarEnDexie(){
   if(saving){ savePending = true; return; }
@@ -394,6 +409,7 @@ async function guardarEnDexie(){
       await db.meta.bulkPut([
         {key:'ajustes', value: state.ajustes},
         {key:'loteActual', value: state.loteActual},
+        {key:'tutorialVisto', value: state.tutorialVisto || false},
         {key:'_lastSaved', value: state._lastSaved}
       ]);
     });
@@ -531,12 +547,11 @@ async function sincronizar(){
 }
 
 /* ============================================================
-   EXPORTAR A EXCEL (SheetJS)
+   EXPORTAR A EXCEL
    ============================================================ */
 function exportarExcel(){
   try{
     const wb = XLSX.utils.book_new();
-
     const regs = [];
     Object.entries(state.registros).forEach(([k,v])=>{
       const idx = k.lastIndexOf('_');
@@ -583,7 +598,6 @@ function exportarExcel(){
       const ws1 = XLSX.utils.json_to_sheet(regs);
       XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
     }
-
     if(state.eventos.length){
       const evs = state.eventos.map(e=>{
         const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
@@ -599,7 +613,6 @@ function exportarExcel(){
       const ws2 = XLSX.utils.json_to_sheet(evs);
       XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
     }
-
     const resumen = state.lotes.map(l=>{
       const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
       const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
@@ -617,13 +630,75 @@ function exportarExcel(){
     });
     const ws3 = XLSX.utils.json_to_sheet(resumen);
     XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
-
     XLSX.writeFile(wb, `bitacora_${HOY()}.xlsx`);
     toast('Excel exportado ✓');
-  }catch(e){
-    console.error(e);
-    toast('Error al exportar');
-  }
+  }catch(e){ console.error(e); toast('Error al exportar'); }
+}
+
+/* ============================================================
+   EXPORTAR A PDF
+   ============================================================ */
+function exportarPDF(){
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const l = lote();
+    const hoy = new Date().toLocaleDateString('es-MX');
+    doc.setFontSize(18);
+    doc.setTextColor(107,142,35);
+    doc.text('Bitácora Avícola', 14, 20);
+    doc.setFontSize(11);
+    doc.setTextColor(80,80,80);
+    doc.text('Reporte: ' + l.nombre, 14, 27);
+    doc.text('Generado: ' + hoy, 14, 33);
+    doc.text('Etapa: ' + cap(l.etapa) + ' · Semana ' + l.semana, 14, 39);
+    doc.text('Aves actuales: ' + l.avesActuales + ' de ' + l.avesIniciales, 14, 45);
+    const mes = new Date().toISOString().slice(0,7);
+    const regs = Object.entries(state.registros)
+      .filter(([k])=> k.startsWith(l.id+'_') && k.includes(mes))
+      .sort();
+    if(regs.length){
+      const rows = regs.map(([k,v])=>[
+        k.split('_')[1],
+        v.ambiente?.tempProm ?? '-',
+        v.ambiente?.humProm ?? '-',
+        v.ambiente?.amoniaco ?? '-',
+        v.produccion?.huevos ?? '-',
+        v.produccion?.alimentoKg ?? '-',
+        v.sanidad?.muertas ?? '-',
+        v.sanidad?.enfermas ?? '-'
+      ]);
+      doc.autoTable({
+        startY: 55,
+        head: [['Fecha','T°','Hum','Amon.','Huevos','Alim.','Muert.','Enfer.']],
+        body: rows, theme: 'grid',
+        styles:{ fontSize: 8, cellPadding: 2 },
+        headStyles:{ fillColor: [107,142,35], textColor: 255 },
+        alternateRowStyles:{ fillColor: [245,245,240] }
+      });
+    }
+    const evs = state.eventos.filter(e=> e.loteId===l.id && e.fecha && e.fecha.startsWith(mes));
+    if(evs.length){
+      const y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
+      doc.setFontSize(13);
+      doc.setTextColor(107,142,35);
+      doc.text('Eventos del mes', 14, y);
+      doc.autoTable({
+        startY: y + 4,
+        head: [['Fecha','Tipo','Subtipo','Producto','Dosis']],
+        body: evs.map(e=>[
+          (e.fecha||'').slice(0,10),
+          e.tipo||'-', e.subtipo||'-',
+          e.producto||'-', e.dosis||'-'
+        ]),
+        theme: 'grid',
+        styles:{ fontSize: 8, cellPadding: 2 },
+        headStyles:{ fillColor: [107,142,35], textColor: 255 }
+      });
+    }
+    doc.save('reporte_'+l.id+'_'+mes+'.pdf');
+    toast('PDF generado ✓');
+  }catch(e){ console.error(e); toast('Error al generar PDF'); }
 }
 
 /* ============================================================
@@ -676,6 +751,8 @@ document.getElementById('themeBtn').onclick = () => {
    NAVEGACIÓN
    ============================================================ */
 let tabActual = 'hoy';
+let histTab = 'lista';
+
 document.querySelectorAll('.nav-item').forEach(b=>{
   b.onclick = () => { tabActual = b.dataset.tab; render(); };
 });
@@ -692,6 +769,9 @@ function render(){
   else if(tabActual==='ajustes')   m.innerHTML = viewAjustes();
   bindMain();
   m.scrollTop = 0;
+  if(tabActual==='historial' && histTab==='graficas'){
+    setTimeout(renderGraficas, 80);
+  }
 }
 
 /* ============================================================
@@ -812,14 +892,29 @@ function resumenSeccion(k, d, l){
 }
 
 /* ============================================================
-   VISTA: HISTORIAL
+   VISTA: HISTORIAL (con tabs + gráficas)
    ============================================================ */
 function viewHistorial(){
+  const tabsHtml = `
+    <div class="tabs">
+      <button class="tab ${histTab==='lista'?'on':''}" data-ht="lista">📋 Lista</button>
+      <button class="tab ${histTab==='graficas'?'on':''}" data-ht="graficas">📈 Gráficas</button>
+    </div>
+  `;
+
+  if(histTab === 'graficas'){
+    return tabsHtml + `
+      <div class="chart-wrap"><h4>🥚 Producción de huevos (30 días)</h4><div class="chart-box"><canvas id="cHuevos"></canvas></div></div>
+      <div class="chart-wrap"><h4>💀 Mortalidad diaria (30 días)</h4><div class="chart-box"><canvas id="cMuertes"></canvas></div></div>
+      <div class="chart-wrap"><h4>🌡️ Temperatura promedio (30 días)</h4><div class="chart-box"><canvas id="cTemp"></canvas></div></div>
+    `;
+  }
+
   const keys = Object.keys(state.registros).sort().reverse().slice(0,60);
   if(!keys.length){
-    return `<div class="empty"><div class="big">📊</div><h3>Sin registros aún</h3><p>Empieza a registrar en la pestaña Hoy</p></div>`;
+    return tabsHtml + `<div class="empty"><div class="big">📊</div><h3>Sin registros aún</h3><p>Empieza a registrar en la pestaña Hoy</p></div>`;
   }
-  let html = '';
+  let html = tabsHtml;
   keys.forEach(k=>{
     const idx = k.lastIndexOf('_');
     const lid = k.slice(0, idx);
@@ -843,10 +938,12 @@ function viewHistorial(){
       if(s.enfermas) partes.push(s.enfermas+' enfermas');
       if(s.descartadas) partes.push(s.descartadas+' descartadas');
       if(partes.length) lineas.push(`<div class="hist-line"><span class="ic">🩺</span>${partes.join(' · ')}</div>`);
+      if(s.fotos && s.fotos.length) lineas.push(`<div class="hist-line"><span class="ic">📷</span>${s.fotos.length} foto(s)</div>`);
     }
     if(r.bienestar){
       const b=r.bienestar;
       lineas.push(`<div class="hist-line"><span class="ic">🐔</span>Plumas ${b.plumas||'?'} · Lesiones ${b.lesiones||'?'}</div>`);
+      if(b.fotos && b.fotos.length) lineas.push(`<div class="hist-line"><span class="ic">📷</span>${b.fotos.length} foto(s)</div>`);
     }
     html += `
       <div class="hist-item">
@@ -856,6 +953,54 @@ function viewHistorial(){
     `;
   });
   return html;
+}
+
+let chartsInit = {};
+function renderGraficas(){
+  const fechas = [], huevos = [], muertes = [], temps = [];
+  for(let i=29; i>=0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const f = d.toISOString().slice(0,10);
+    fechas.push(f.slice(5));
+    const r = state.registros[state.loteActual+'_'+f] || {};
+    huevos.push(r.produccion?.huevos || 0);
+    muertes.push(r.sanidad?.muertas || 0);
+    temps.push(r.ambiente?.tempProm || null);
+  }
+  const isDark = state.ajustes.dark;
+  const textColor = isDark ? '#F0F0F0' : '#2D2D2D';
+  const gridColor = isDark ? '#2F2F2F' : '#E5E5E0';
+  const opts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{color:textColor,font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
+      y:{beginAtZero:true,ticks:{color:textColor,font:{size:10},precision:0},grid:{color:gridColor}}
+    }
+  };
+  ['cHuevos','cMuertes','cTemp'].forEach(id=>{
+    if(chartsInit[id]){ chartsInit[id].destroy(); chartsInit[id]=null; }
+  });
+  const ctx1 = document.getElementById('cHuevos');
+  if(ctx1) chartsInit.cHuevos = new Chart(ctx1, {
+    type:'line', data:{labels:fechas,datasets:[{
+      data:huevos,borderColor:'#6B8E23',backgroundColor:'rgba(107,142,35,.15)',
+      fill:true,tension:.3,pointRadius:2,borderWidth:2
+    }]}, options:opts
+  });
+  const ctx2 = document.getElementById('cMuertes');
+  if(ctx2) chartsInit.cMuertes = new Chart(ctx2, {
+    type:'bar', data:{labels:fechas,datasets:[{
+      data:muertes,backgroundColor:'#E53935',borderRadius:4
+    }]}, options:opts
+  });
+  const ctx3 = document.getElementById('cTemp');
+  if(ctx3) chartsInit.cTemp = new Chart(ctx3, {
+    type:'line', data:{labels:fechas,datasets:[{
+      data:temps,borderColor:'#FF9800',backgroundColor:'rgba(255,152,0,.15)',
+      fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true
+    }]}, options:opts
+  });
 }
 
 function formatFecha(f){
@@ -868,7 +1013,7 @@ function formatFecha(f){
 }
 
 /* ============================================================
-   VISTA: LOTES (ahora con menú de opciones)
+   VISTA: LOTES
    ============================================================ */
 function viewLotes(){
   if(!state.lotes.length){
@@ -940,6 +1085,10 @@ function viewAjustes(){
         <span class="lbl">📊 Exportar a Excel (.xlsx)</span>
         <span class="val chev"></span>
       </div>
+      <div class="setting-row" data-act="exportPDF">
+        <span class="lbl">📄 Reporte PDF del mes</span>
+        <span class="val chev"></span>
+      </div>
       <div class="setting-row" data-act="exportJSON">
         <span class="lbl">💾 Exportar copia (JSON)</span>
         <span class="val chev"></span>
@@ -948,7 +1097,7 @@ function viewAjustes(){
         <span class="lbl">📥 Importar copia (JSON)</span>
         <span class="val chev"></span>
       </div>
-            <div class="setting-row" data-act="tutorial">
+      <div class="setting-row" data-act="tutorial">
         <span class="lbl">📖 Ver tutorial de nuevo</span>
         <span class="val chev"></span>
       </div>
@@ -956,6 +1105,24 @@ function viewAjustes(){
         <span class="lbl" style="color:var(--danger)">Borrar todos los datos</span>
         <span class="val chev"></span>
       </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="group-title">🔔 Notificaciones</div>
+      <div class="setting-row" data-act="toggleNotif">
+        <span class="lbl">Recordatorio diario</span>
+        <span class="val chev">${state.ajustes.notifActivas ? '✓ Activas' : 'Desactivadas'}</span>
+      </div>
+      ${state.ajustes.notifActivas ? `
+        <div class="setting-row" data-act="editNotifHora">
+          <span class="lbl">Hora del recordatorio</span>
+          <span class="val chev">${String(state.ajustes.notifHora||8).padStart(2,'0')}:00</span>
+        </div>
+        <div class="setting-row" data-act="testNotif">
+          <span class="lbl">🔔 Probar notificación</span>
+          <span class="val chev"></span>
+        </div>
+      `:''}
     </div>
 
     <div class="setting-group">
@@ -977,7 +1144,7 @@ function viewAjustes(){
     </div>
 
     <div style="text-align:center;color:var(--text3);font-size:11.5px;margin-top:24px;line-height:1.6">
-      Bitácora Avícola · v2.1<br>
+      Bitácora Avícola · v2.2<br>
       Datos locales + Google Drive
     </div>
   `;
@@ -1002,10 +1169,11 @@ function bindMain(){
       else if(r.dataset.rem==='limpieza') abrirEvento('bioseg');
     };
   });
-
-  // ✅ CAMBIO: Ahora abre el menú de opciones en lugar de seleccionar directamente
   document.querySelectorAll('.lote-item').forEach(x=>{
     x.onclick = ()=> abrirOpcionesLote(x.dataset.lote);
+  });
+  document.querySelectorAll('[data-ht]').forEach(t=>{
+    t.onclick = ()=>{ histTab = t.dataset.ht; render(); };
   });
 
   const newLoteBtn = document.getElementById('newLoteBtn');
@@ -1028,7 +1196,7 @@ function bindMain(){
 /* ============================================================
    ACCIONES RÁPIDAS
    ============================================================ */
-  async function quickAction(q){
+async function quickAction(q){
   const config = {
     muertas:  { label:'¿Cuántas aves muertas hoy?', campo:'muertas', sec:'sanidad' },
     huevos:   { label:'¿Cuántos huevos recolectados?', campo:'huevos', sec:'produccion' },
@@ -1038,7 +1206,6 @@ function bindMain(){
   const c = config[q];
   if(!c) return;
 
-  // Caso especial: agua (input de texto)
   if(q==='agua'){
     const val = await mostrarInput({
       titulo: '💧 Consumo de agua',
@@ -1057,7 +1224,6 @@ function bindMain(){
     return;
   }
 
-  // Casos numéricos
   const emoji = { muertas:'💀', huevos:'🥚', alimento:'🌾' }[q] || '';
   const val = await mostrarInput({
     titulo: emoji + ' ' + c.label,
@@ -1085,7 +1251,7 @@ function bindMain(){
 }
 
 /* ============================================================
-   SELECTOR DE LOTE (desde el header)
+   SELECTOR DE LOTE
    ============================================================ */
 function abrirSelectorLote(){
   const sheet = document.getElementById('sheet');
@@ -1115,13 +1281,12 @@ function abrirSelectorLote(){
 }
 
 /* ============================================================
-   ✅ NUEVO: OPCIONES DE LOTE (Seleccionar / Editar / Eliminar)
+   OPCIONES DE LOTE
    ============================================================ */
 function abrirOpcionesLote(loteId){
   const l = state.lotes.find(x=>x.id===loteId);
   if(!l) return;
   const esActual = l.id === state.loteActual;
-
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
     <div class="drag"></div>
@@ -1142,7 +1307,6 @@ function abrirOpcionesLote(loteId){
       <div class="txt"><h4 style="color:var(--danger)">Eliminar lote</h4><p>Borra el lote y todos sus registros</p></div>
     </div>
   `;
-
   sheet.querySelector('[data-opt="select"]').onclick = ()=>{
     state.loteActual = l.id;
     save(); cerrarSheet(); tabActual='hoy'; render();
@@ -1167,30 +1331,26 @@ function abrirOpcionesLote(loteId){
       toast('Lote eliminado');
     }
   };
-
   abrirSheet();
 }
 
 /* ============================================================
-   ✅ NUEVO: FORMULARIO DE LOTE (Crear / Editar)
+   FORMULARIO DE LOTE
    ============================================================ */
 function abrirFormLote(loteId){
   const esEdicion = !!loteId;
   const l = esEdicion ? state.lotes.find(x=>x.id===loteId) : null;
-
   const screen = document.getElementById('screen');
   const title  = document.getElementById('screenTitle');
   const body   = document.getElementById('screenBody');
   const action = document.getElementById('screenAction');
   action.style.display = 'none';
   title.textContent = esEdicion ? '✏️ Editar lote' : '🐔 Nuevo lote';
-
   body.innerHTML = `
     <div class="field">
       <label>Nombre del lote</label>
       <input type="text" class="text-input" id="fNombre" value="${l?.nombre||''}" placeholder="Ej: Galpón 4">
     </div>
-
     <div class="field">
       <label>Etapa</label>
       <div class="chips" id="fEtapa">
@@ -1200,54 +1360,37 @@ function abrirFormLote(loteId){
         <button type="button" class="chip ${l?.etapa==='descarte'?'on':''}" data-v="descarte">Descarte</button>
       </div>
     </div>
-
     <div class="field">
       <label>Línea genética / híbrido</label>
       <input type="text" class="text-input" id="fLinea" value="${l?.linea||''}" placeholder="Ej: Lohmann Brown">
     </div>
-
     <div class="field">
       <label>Semana de edad</label>
-      <div class="input-row one">
-        <div class="num-input"><input type="number" inputmode="numeric" id="fSemana" value="${l?.semana??''}" placeholder="1"></div>
-      </div>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="numeric" id="fSemana" value="${l?.semana??''}" placeholder="1"></div></div>
     </div>
-
     <div class="field">
       <label>Aves iniciales</label>
-      <div class="input-row one">
-        <div class="num-input"><input type="number" inputmode="numeric" id="fAvesIni" value="${l?.avesIniciales??''}" placeholder="0"></div>
-      </div>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="numeric" id="fAvesIni" value="${l?.avesIniciales??''}" placeholder="0"></div></div>
     </div>
-
     <div class="field">
       <label>Aves actuales</label>
-      <div class="input-row one">
-        <div class="num-input"><input type="number" inputmode="numeric" id="fAvesAct" value="${l?.avesActuales??''}" placeholder="0"></div>
-      </div>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="numeric" id="fAvesAct" value="${l?.avesActuales??''}" placeholder="0"></div></div>
     </div>
-
     ${esEdicion ? `
       <div class="reminder" style="margin-bottom:16px">
         <span class="ic">⚠️</span>
-        <div class="txt">
-          <b>Editar aves actuales</b>
-          <span>Cambiar este valor no borra registros, solo ajusta el conteo</span>
-        </div>
+        <div class="txt"><b>Editar aves actuales</b><span>Cambiar este valor no borra registros, solo ajusta el conteo</span></div>
       </div>
     ` : ''}
-
     <button class="save-btn" id="saveLote">${esEdicion?'Guardar cambios':'Crear lote'}</button>
     ${esEdicion?`<button class="save-btn danger" id="deleteLote" style="margin-top:10px">🗑️ Eliminar este lote</button>`:''}
   `;
-
   body.querySelectorAll('#fEtapa .chip').forEach(c=>{
     c.onclick = ()=>{
       body.querySelectorAll('#fEtapa .chip').forEach(x=>x.classList.remove('on'));
       c.classList.add('on');
     };
   });
-
   document.getElementById('saveLote').onclick = ()=>{
     const nombre = document.getElementById('fNombre').value.trim();
     if(!nombre){ toast('Falta el nombre'); return; }
@@ -1257,30 +1400,18 @@ function abrirFormLote(loteId){
     const semana = parseInt(document.getElementById('fSemana').value) || 1;
     const avesIni = parseInt(document.getElementById('fAvesIni').value) || 0;
     const avesAct = parseInt(document.getElementById('fAvesAct').value) || avesIni;
-
     if(esEdicion){
-      l.nombre = nombre;
-      l.etapa = etapa;
-      l.linea = linea;
-      l.semana = semana;
-      l.avesIniciales = avesIni;
-      l.avesActuales = avesAct;
+      l.nombre = nombre; l.etapa = etapa; l.linea = linea;
+      l.semana = semana; l.avesIniciales = avesIni; l.avesActuales = avesAct;
       toast('Lote actualizado ✓');
     } else {
       const id = 'lote_'+Date.now();
-      state.lotes.push({
-        id, nombre, etapa, linea, semana,
-        avesIniciales: avesIni,
-        avesActuales: avesAct
-      });
+      state.lotes.push({ id, nombre, etapa, linea, semana, avesIniciales: avesIni, avesActuales: avesAct });
       state.loteActual = id;
       toast('Lote creado ✓');
     }
-    save();
-    screen.classList.remove('open');
-    render();
+    save(); screen.classList.remove('open'); render();
   };
-
   const delBtn = document.getElementById('deleteLote');
   if(delBtn) delBtn.onclick = ()=>{
     if(state.lotes.length<=1){ toast('No puedes borrar el último lote'); return; }
@@ -1290,25 +1421,15 @@ function abrirFormLote(loteId){
       });
       state.eventos = state.eventos.filter(e=> e.loteId !== l.id);
       state.lotes = state.lotes.filter(x=> x.id !== l.id);
-      if(state.loteActual === l.id){
-        state.loteActual = state.lotes[0]?.id || null;
-      }
-      save();
-      screen.classList.remove('open');
-      render();
+      if(state.loteActual === l.id) state.loteActual = state.lotes[0]?.id || null;
+      save(); screen.classList.remove('open'); render();
       toast('Lote eliminado');
     }
   };
-
   screen.classList.add('open');
 }
 
-/* ============================================================
-   NUEVO LOTE (abre el formulario visual)
-   ============================================================ */
-function nuevoLote(){
-  abrirFormLote(null);
-}
+function nuevoLote(){ abrirFormLote(null); }
 
 /* ============================================================
    HOJA INFERIOR
@@ -1544,6 +1665,11 @@ function formSanidad(d, l){
     <div class="field"><label>Notas</label>
       <input type="text" class="text-input" data-n="notas" value="${d.notas||''}" placeholder="Observaciones...">
     </div>
+    <div class="field">
+      <label>📷 Fotos (aves enfermas, lesiones, heces)</label>
+      <div class="photo-grid" id="fotosSanidad"></div>
+      <input type="file" id="fileSanidad" accept="image/*" capture="environment" style="display:none">
+    </div>
     <button class="save-btn ghost" id="addEventoSan" style="margin-top:8px">💉 + Registrar tratamiento / vacuna</button>
     <button class="save-btn" id="saveSec">Guardar sección</button>
   `;
@@ -1569,8 +1695,82 @@ function formBienestar(d){
     <div class="field"><label>Presencia de aves silvestres</label>${chipsHTML('avesSilvestres',[
       {v:'si',t:'Sí'},{v:'no',t:'No'}
     ], d.avesSilvestres)}</div>
+    <div class="field">
+      <label>📷 Fotos (estado de plumas, lesiones, pododermatitis)</label>
+      <div class="photo-grid" id="fotosBienestar"></div>
+      <input type="file" id="fileBienestar" accept="image/*" capture="environment" style="display:none">
+    </div>
     <button class="save-btn" id="saveSec">Guardar sección</button>
   `;
+}
+
+/* ============================================================
+   FOTOS
+   ============================================================ */
+let fotosTemp = { sanidad: [], bienestar: [] };
+
+function initFotos(sec){
+  const existentes = (getReg()[sec]?.fotos) || [];
+  fotosTemp[sec] = [...existentes];
+  renderFotos(sec);
+  const file = document.getElementById('file'+cap(sec));
+  if(file) file.onchange = async (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const compressed = await comprimirImagen(f);
+    fotosTemp[sec].push(compressed);
+    renderFotos(sec);
+    file.value = '';
+  };
+}
+
+function renderFotos(sec){
+  const grid = document.getElementById('fotos'+cap(sec));
+  if(!grid) return;
+  const fotos = fotosTemp[sec] || [];
+  grid.innerHTML = fotos.map((f,i)=>`
+    <div class="photo-item">
+      <img src="${f}" alt="foto">
+      <button class="del" data-del="${i}" type="button">×</button>
+    </div>
+  `).join('') + `
+    <div class="photo-add" id="addFoto${cap(sec)}">
+      <span class="ic">📷</span>
+      <span>Agregar</span>
+    </div>
+  `;
+  grid.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=>{
+      fotosTemp[sec].splice(parseInt(b.dataset.del), 1);
+      renderFotos(sec);
+    };
+  });
+  const addBtn = document.getElementById('addFoto'+cap(sec));
+  if(addBtn) addBtn.onclick = ()=> document.getElementById('file'+cap(sec)).click();
+}
+
+function comprimirImagen(file){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const MAX = 800;
+        let {width, height} = img;
+        if(width > MAX || height > MAX){
+          if(width > height){ height = Math.round(height*MAX/width); width = MAX; }
+          else { width = Math.round(width*MAX/height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ============================================================
@@ -1599,6 +1799,8 @@ function bindForm(k){
       h.classList.toggle('open');
     };
   });
+  if(k==='sanidad') initFotos('sanidad');
+  if(k==='bienestar') initFotos('bienestar');
   const saveBtn = document.getElementById('saveSec');
   if(saveBtn) saveBtn.onclick = ()=> guardarSeccion(k);
   const evSan = document.getElementById('addEventoSan');
@@ -1631,6 +1833,9 @@ function leerFormulario(){
 function guardarSeccion(k){
   const data = leerFormulario();
   const prev = getReg()[k] || {};
+  if(k==='sanidad' || k==='bienestar'){
+    data.fotos = fotosTemp[k] || [];
+  }
   if(k==='sanidad'){
     const l = lote();
     const dif = (data.muertas||0) + (data.descartadas||0);
@@ -1777,6 +1982,7 @@ function eventoAdmin(){
    ============================================================ */
 function accionAjuste(act){
   if(act==='exportExcel'){ exportarExcel(); }
+  if(act==='exportPDF'){ exportarPDF(); }
   if(act==='exportJSON'){
     const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -1785,7 +1991,6 @@ function accionAjuste(act){
     URL.revokeObjectURL(url);
     toast('Copia exportada');
   }
-    if(act==='tutorial'){ iniciarTutorial(true); }
   if(act==='importJSON'){
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.json,application/json';
@@ -1803,6 +2008,7 @@ function accionAjuste(act){
     };
     input.click();
   }
+  if(act==='tutorial'){ iniciarTutorial(true); }
   if(act==='reset'){
     if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')){
       db.delete().then(()=>{
@@ -1838,9 +2044,96 @@ function accionAjuste(act){
     state.ajustes.pesoDia = n;
     save(); render(); toast('Día actualizado');
   }
+  if(act==='toggleNotif'){
+    if(state.ajustes.notifActivas) desactivarNotificaciones();
+    else activarNotificaciones();
+  }
+  if(act==='editNotifHora'){
+    const v = prompt('Hora del recordatorio (0-23):', state.ajustes.notifHora || 8);
+    if(v==null) return;
+    const h = parseInt(v);
+    if(isNaN(h) || h<0 || h>23){ toast('Hora inválida'); return; }
+    state.ajustes.notifHora = h;
+    save(); programarNotificacion(); render();
+    toast('Hora actualizada');
+  }
+  if(act==='testNotif'){ probarNotificacion(); }
 }
+
 /* ============================================================
-   MODAL DE INPUT (reemplaza prompt nativo)
+   NOTIFICACIONES
+   ============================================================ */
+async function activarNotificaciones(){
+  if(!('Notification' in window)){
+    toast('Este dispositivo no soporta notificaciones');
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if(perm === 'granted'){
+    state.ajustes.notifActivas = true;
+    state.ajustes.notifHora = state.ajustes.notifHora || 8;
+    save();
+    programarNotificacion();
+    toast('Notificaciones activadas ✓');
+    render();
+  } else {
+    toast('Permiso denegado');
+  }
+}
+
+function desactivarNotificaciones(){
+  state.ajustes.notifActivas = false;
+  save();
+  toast('Notificaciones desactivadas');
+  render();
+}
+
+function programarNotificacion(){
+  if(!state.ajustes.notifActivas) return;
+  if(Notification.permission !== 'granted') return;
+  const ahora = new Date();
+  const hora = state.ajustes.notifHora || 8;
+  const proxima = new Date();
+  proxima.setHours(hora, 0, 0, 0);
+  if(proxima <= ahora) proxima.setDate(proxima.getDate() + 1);
+  const ms = proxima - ahora;
+  state.ajustes.notifProxima = proxima.toISOString();
+  save();
+  clearTimeout(window._notifTimer);
+  window._notifTimer = setTimeout(()=>{
+    mostrarNotificacionRecordatorio();
+    programarNotificacion();
+  }, ms);
+}
+
+function mostrarNotificacionRecordatorio(){
+  if(Notification.permission !== 'granted') return;
+  const l = lote();
+  const reg = getReg();
+  const completas = ['ambiente','produccion','sanidad','bienestar'].filter(k=>reg[k]).length;
+  if(completas < 3){
+    new Notification('🐔 Bitácora Avícola', {
+      body: `Aún faltan registros de hoy en ${l.nombre}. Progreso: ${completas}/4`,
+      icon: 'icon.png',
+      tag: 'recordatorio-diario'
+    });
+  }
+}
+
+function probarNotificacion(){
+  if(Notification.permission !== 'granted'){
+    toast('Primero activa las notificaciones');
+    return;
+  }
+  new Notification('🐔 Bitácora Avícola', {
+    body: 'Así se verán los recordatorios. ¡Todo funciona!',
+    icon: 'icon.png'
+  });
+  toast('Notificación enviada');
+}
+
+/* ============================================================
+   MODAL DE INPUT
    ============================================================ */
 function mostrarInput({ titulo, sub, tipo='number', valor='' }){
   return new Promise(resolve => {
@@ -1850,7 +2143,6 @@ function mostrarInput({ titulo, sub, tipo='number', valor='' }){
     const input = document.getElementById('modalInput');
     const cancel = document.getElementById('modalCancel');
     const confirm = document.getElementById('modalConfirm');
-
     title.textContent = titulo;
     subt.textContent = sub || '';
     subt.style.display = sub ? 'block' : 'none';
@@ -1858,10 +2150,8 @@ function mostrarInput({ titulo, sub, tipo='number', valor='' }){
     input.value = valor;
     input.inputMode = tipo === 'number' ? 'decimal' : 'text';
     input.style.fontSize = tipo === 'number' ? '24px' : '18px';
-
     bg.classList.add('open');
     setTimeout(()=>{ input.focus(); input.select(); }, 150);
-
     function cerrar(v){
       bg.classList.remove('open');
       cancel.onclick = null;
@@ -1869,7 +2159,6 @@ function mostrarInput({ titulo, sub, tipo='number', valor='' }){
       input.onkeydown = null;
       resolve(v);
     }
-
     cancel.onclick = ()=> cerrar(null);
     confirm.onclick = ()=> cerrar(input.value.trim());
     input.onkeydown = (e)=>{
@@ -1880,39 +2169,16 @@ function mostrarInput({ titulo, sub, tipo='number', valor='' }){
 }
 
 /* ============================================================
-   TUTORIAL INTERACTIVO
+   TUTORIAL
    ============================================================ */
 const TUTORIAL_PASOS = [
-  {
-    emoji: '🐔',
-    titulo: '¡Bienvenido!',
-    texto: 'Esta es tu bitácora digital para la granja avícola. Aquí registrarás todo lo del día a día, de forma rápida y sin papeles.'
-  },
-  {
-    emoji: '🏠',
-    titulo: 'Tus galpones',
-    texto: 'En la pestaña Lotes puedes crear, editar y eliminar galpones. Toca uno para seleccionarlo como el actual.'
-  },
-  {
-    emoji: '📝',
-    titulo: 'Registro diario',
-    texto: 'En la pantalla Hoy verás 4 tarjetas: Ambiente, Producción, Sanidad y Bienestar. Toca cada una para registrar los datos del día.'
-  },
-  {
-    emoji: '⚡',
-    titulo: 'Acciones rápidas',
-    texto: 'Usa estos botones para registrar mortalidad, huevos, alimento o agua en segundos, sin abrir toda la sección.'
-  },
-  {
-    emoji: '➕',
-    titulo: 'Eventos especiales',
-    texto: 'El botón + del centro abre un menú para registrar vacunas, tratamientos, limpiezas, compras, ventas y más.'
-  },
-  {
-    emoji: '☁️',
-    titulo: 'Sincronización',
-    texto: 'En Ajustes puedes conectar con Google Drive. Así tus datos se respaldan y se comparten entre dispositivos automáticamente.'
-  }
+  { emoji:'🐔', titulo:'¡Bienvenido!', texto:'Esta es tu bitácora digital para la granja avícola. Aquí registrarás todo lo del día a día, de forma rápida y sin papeles.' },
+  { emoji:'🏠', titulo:'Tus galpones', texto:'En la pestaña Lotes puedes crear, editar y eliminar galpones. Toca uno para seleccionarlo como el actual.' },
+  { emoji:'📝', titulo:'Registro diario', texto:'En la pantalla Hoy verás 4 tarjetas: Ambiente, Producción, Sanidad y Bienestar. Toca cada una para registrar los datos del día.' },
+  { emoji:'⚡', titulo:'Acciones rápidas', texto:'Usa estos botones para registrar mortalidad, huevos, alimento o agua en segundos, sin abrir toda la sección.' },
+  { emoji:'➕', titulo:'Eventos especiales', texto:'El botón + del centro abre un menú para registrar vacunas, tratamientos, limpiezas, compras, ventas y más.' },
+  { emoji:'📈', titulo:'Gráficas y reportes', texto:'En Historial puedes ver gráficas de producción y mortalidad. En Ajustes puedes generar un reporte PDF del mes.' },
+  { emoji:'☁️', titulo:'Sincronización', texto:'En Ajustes puedes conectar con Google Drive. Así tus datos se respaldan y se comparten entre dispositivos automáticamente.' }
 ];
 
 let tutPaso = 0;
@@ -1929,14 +2195,11 @@ function actualizarTutorial(){
   document.getElementById('tutEmoji').textContent = p.emoji;
   document.getElementById('tutTitle').textContent = p.titulo;
   document.getElementById('tutText').textContent = p.texto;
-
   document.getElementById('tutDots').innerHTML = TUTORIAL_PASOS.map((_, i) =>
     `<div class="dot ${i === tutPaso ? 'on' : ''}"></div>`
   ).join('');
-
   const prev = document.getElementById('tutPrev');
   const next = document.getElementById('tutNext');
-
   prev.style.display = tutPaso === 0 ? 'none' : 'block';
   next.textContent = tutPaso === TUTORIAL_PASOS.length - 1 ? '¡Empezar!' : 'Siguiente';
 }
@@ -1959,6 +2222,7 @@ function cerrarTutorial(){
   state.tutorialVisto = true;
   save();
 }
+
 /* ============================================================
    INICIALIZACIÓN
    ============================================================ */
@@ -1971,34 +2235,30 @@ function cerrarTutorial(){
     const ls = localStorage.getItem('bitacora_avicola_v2');
     state = ls ? JSON.parse(ls) : {
       lotes: DEFAULT_LOTES, loteActual: 'g3', registros: {}, eventos: [],
-      ajustes: { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1 },
+      ajustes: { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1, notifActivas:false, notifHora:8 },
+      tutorialVisto: false,
       _lastSaved: 0
     };
   }
-   aplicarTema();
+  aplicarTema();
   render();
   setTimeout(initGoogle, 500);
   setTimeout(()=> iniciarTutorial(), 900);
+  setTimeout(programarNotificacion, 2000);
 })();
-  
+
 /* ============================================================
-   SERVICE WORKER (PWA) con auto-actualización
+   SERVICE WORKER con auto-actualización
    ============================================================ */
 if('serviceWorker' in navigator){
   let refreshing = false;
-
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
-      // Buscar actualizaciones cada vez que se abre la app
       reg.update();
-
-      // Detectar cuando hay una versión nueva
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         if(!newWorker) return;
-
         newWorker.addEventListener('statechange', () => {
-          // Hay una versión nueva lista y hay una vieja controlando
           if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
             mostrarAvisoActualizacion(newWorker);
           }
@@ -2006,69 +2266,35 @@ if('serviceWorker' in navigator){
       });
     }).catch(err => console.log('SW error', err));
   });
-
-  // Cuando el SW nuevo toma el control, recargar una vez
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(!refreshing){
       refreshing = true;
       window.location.reload();
     }
   });
-
-  // Aviso visual de actualización
   function mostrarAvisoActualizacion(worker){
-    // Eliminar aviso previo si existe
     const previo = document.getElementById('updateBanner');
     if(previo) previo.remove();
-
     const banner = document.createElement('div');
     banner.id = 'updateBanner';
     banner.innerHTML = `
-      <div style="
-        position:fixed;top:0;left:50%;transform:translateX(-50%);
-        width:100%;max-width:520px;
-        background:#6B8E23;color:#fff;
-        padding:12px 16px;
-        display:flex;align-items:center;justify-content:space-between;
-        z-index:9999;
-        box-shadow:0 2px 12px rgba(0,0,0,.25);
-        font-family:inherit;font-size:13.5px;font-weight:500;
-        animation:slideDown .3s ease;
-      ">
+      <div style="position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#6B8E23;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.25);font-family:inherit;font-size:13.5px;font-weight:500;animation:slideDown .3s ease;">
         <span>🎉 Hay una actualización disponible</span>
         <div style="display:flex;gap:8px">
-          <button id="updateNow" style="
-            background:#fff;color:#6B8E23;
-            border:none;border-radius:8px;
-            padding:7px 14px;font-size:12.5px;font-weight:700;
-            cursor:pointer;
-          ">Actualizar</button>
-          <button id="updateLater" style="
-            background:transparent;color:#fff;
-            border:1px solid rgba(255,255,255,.5);border-radius:8px;
-            padding:7px 12px;font-size:12.5px;
-            cursor:pointer;
-          ">Después</button>
+          <button id="updateNow" style="background:#fff;color:#6B8E23;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;">Actualizar</button>
+          <button id="updateLater" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;">Después</button>
         </div>
       </div>
-      <style>
-        @keyframes slideDown {
-          from { transform: translateX(-50%) translateY(-100%); }
-          to { transform: translateX(-50%) translateY(0); }
-        }
-      </style>
+      <style>@keyframes slideDown{from{transform:translateX(-50%) translateY(-100%);}to{transform:translateX(-50%) translateY(0);}}</style>
     `;
     document.body.appendChild(banner);
-
     document.getElementById('updateNow').onclick = () => {
       worker.postMessage({type: 'SKIP_WAITING'});
       banner.remove();
     };
-    document.getElementById('updateLater').onclick = () => {
-      banner.remove();
-    };
+    document.getElementById('updateLater').onclick = () => { banner.remove(); };
   }
 }
 </script>
 </body>
-</html> 
+</html>
