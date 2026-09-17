@@ -1,5 +1,5 @@
 /* Service Worker - Bitácora Avícola */
-const CACHE = 'bitacora-v1';
+const CACHE = 'bitacora-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -45,3 +45,10 @@ self.addEventListener('fetch', e => {
     })
   );
 });
+
+/* Permitir que el nuevo SW tome el control inmediatamente */
+self.addEventListener('message', e => {
+  if(e.data && e.data.type === 'SKIP_WAITING'){
+    self.skipWaiting();
+  }
+});  
