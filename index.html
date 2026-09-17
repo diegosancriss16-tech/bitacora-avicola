@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#6B8E23">
+<title>Bitácora Avícola</title>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --primary:#6B8E23; --primary-dark:#4A6318; --primary-light:#8FBF3F;
+  --accent:#F5C542;
+  --bg:#FAFAF7; --card:#FFFFFF; --card2:#F5F5F0;
+  --text:#2D2D2D; --text2:#6E6E6E; --text3:#A0A0A0;
+  --success:#4CAF50; --warning:#FF9800; --danger:#E53935;
+  --border:#E5E5E0;
+  --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.12);
+  --radius:12px; --radius-sm:8px; --radius-lg:20px;
+}
+[data-theme="dark"]{
+  --primary:#8FBF3F; --primary-dark:#6B8E23; --primary-light:#A5D060;
+  --bg:#141414; --card:#1F1F1F; --card2:#2A2A2A;
+  --text:#F0F0F0; --text2:#A0A0A0; --text3:#707070;
+  --border:#2F2F2F;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.4;overscroll-behavior:none;user-select:none}
+input,textarea{user-select:text}
+#app{max-width:520px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20}
+.header h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.header h1 .logo{font-size:20px}
+.header .hbtns{display:flex;gap:4px;align-items:center}
+.hbtn{width:38px;height:38px;border-radius:10px;border:none;background:transparent;color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.hbtn:active{background:var(--border)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);margin-right:6px;transition:.3s}
+.sync-dot.on{background:var(--success);box-shadow:0 0 8px rgba(76,175,80,.6)}
+.sync-dot.syncing{background:var(--warning);animation:pulse 1s infinite}
+.sync-dot.err{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.main{flex:1;overflow-y:auto;padding:14px 16px 110px;-webkit-overflow-scrolling:touch}
+.main::-webkit-scrollbar{width:0}
+.lote-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);transition:.15s}
+.lote-card:active{transform:scale(.985)}
+.lote-card .info h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+.lote-card .info .dot{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block}
+.lote-card .info .dot.warn{background:var(--warning)}
+.lote-card .info .dot.danger{background:var(--danger)}
+.lote-card .info p{font-size:12.5px;color:var(--text2);margin-top:3px}
+.lote-card .chev{color:var(--text3);font-size:20px}
+.progress-card{background:var(--card);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow);margin-bottom:14px;border:1px solid var(--border)}
+.progress-card .lbl{font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;justify-content:space-between;font-weight:500}
+.progress-card .lbl b{color:var(--primary)}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:3px;transition:width .5s ease}
+.section-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;cursor:pointer;border:1px solid var(--border);border-left:4px solid var(--border);transition:transform .12s, border-color .2s}
+.section-card:active{transform:scale(.985)}
+.section-card.ok{border-left-color:var(--success)}
+.section-card.pending{border-left-color:var(--warning)}
+.section-card.alert{border-left-color:var(--danger)}
+.section-card .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.section-card .title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:10px}
+.section-card .title .ic{font-size:20px}
+.section-card .status{font-size:18px}
+.section-card .summary{font-size:13px;color:var(--text2);margin-top:5px;padding-left:30px}
+.quick-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;border:1px solid var(--border)}
+.quick-card h4{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quick-btn{padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:.12s}
+.quick-btn:active{background:var(--border);transform:scale(.97)}
+.reminder{background:#FFF8E1;border-left:4px solid var(--warning);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;font-size:13px;display:flex;gap:10px;align-items:center;cursor:pointer}
+[data-theme="dark"] .reminder{background:#3A2E10}
+.reminder.crit{background:#FFEBEE;border-left-color:var(--danger)}
+[data-theme="dark"] .reminder.crit{background:#3A1010}
+.reminder .ic{font-size:16px}
+.reminder .txt{flex:1}
+.reminder .txt b{display:block;font-weight:600;margin-bottom:2px}
+.reminder .txt span{font-size:12px;color:var(--text2)}
+.nav{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:6px 0 8px;z-index:30;box-shadow:0 -2px 8px rgba(0,0,0,.04)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--text3);font-size:10.5px;cursor:pointer;padding:4px 2px;font-weight:500;transition:.15s}
+.nav-item .ic{font-size:20px;line-height:1;transition:.2s}
+.nav-item.active{color:var(--primary)}
+.nav-item.active .ic{transform:scale(1.15)}
+.nav-plus{width:54px;height:54px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 12px rgba(107,142,35,.4);display:flex;align-items:center;justify-content:center;margin-top:-22px;transition:.15s;flex-shrink:0}
+.nav-plus:active{transform:scale(.92) rotate(90deg)}
+.screen{position:fixed;inset:0;background:var(--bg);z-index:40;display:none;flex-direction:column;max-width:520px;margin:0 auto;animation:slideUp .22s ease}
+.screen.open{display:flex}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.screen-header{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0}
+.screen-header .back{width:38px;height:38px;border-radius:10px;border:none;background:transparent;color:var(--text);font-size:20px;cursor:pointer;flex-shrink:0}
+.screen-header .back:active{background:var(--border)}
+.screen-header h2{font-size:16px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen-header .action{font-size:12.5px;color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600;padding:6px 10px;border-radius:8px}
+.screen-header .action:active{background:var(--card2)}
+.screen-body{flex:1;overflow-y:auto;padding:16px 16px 120px}
+.field{margin-bottom:16px}
+.field>label{font-size:12.5px;color:var(--text2);font-weight:600;display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.3px}
+.input-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.input-row.two{grid-template-columns:1fr 1fr}
+.input-row.one{grid-template-columns:1fr}
+.num-input{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;transition:.15s}
+.num-input:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,142,35,.12)}
+.num-input .cap{font-size:10.5px;color:var(--text3);margin-bottom:3px;font-weight:500}
+.num-input input{width:100%;border:none;background:transparent;color:var(--text);font-size:17px;font-weight:700;text-align:center;outline:none;font-variant-numeric:tabular-nums}
+.num-input input::placeholder{color:var(--text3);font-weight:400;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;white-space:nowrap;transition:.15s;font-weight:500}
+.chip:active{transform:scale(.95)}
+.chip.on{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 2px 6px rgba(107,142,35,.25)}
+[data-theme="dark"] .chip.on{color:#141414}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.check{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;transition:.15s}
+.check.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+[data-theme="dark"] .check.on{color:#141414}
+.check .box{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.check.on .box{background:#fff;color:var(--primary);border-color:#fff}
+.save-btn{width:100%;padding:14px;border-radius:var(--radius-sm);border:none;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:.15s;box-shadow:0 2px 8px rgba(107,142,35,.2)}
+.save-btn:active{background:var(--primary-dark);transform:scale(.98)}
+[data-theme="dark"] .save-btn{color:#141414}
+.save-btn.ghost{background:transparent;color:var(--primary);border:1.5px solid var(--primary);box-shadow:none}
+.save-btn.ghost:active{background:var(--card2)}
+.save-btn.danger{background:var(--danger);color:#fff;box-shadow:0 2px 8px rgba(229,57,53,.2)}
+.save-btn.danger:active{background:#B71C1C}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:none;animation:fade .2s}
+.sheet-bg.open{display:block}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:520px;background:var(--card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 16px 24px;z-index:51;transition:transform .28s cubic-bezier(.2,.8,.3,1);max-height:85vh;overflow-y:auto}
+.sheet.open{transform:translateX(-50%) translateY(0)}
+.sheet .drag{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.sheet h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.sheet-opt{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:8px;cursor:pointer;background:var(--card2);transition:.15s}
+.sheet-opt:active{transform:scale(.98);background:var(--border)}
+.sheet-opt .ic{font-size:22px;flex-shrink:0}
+.sheet-opt .txt{flex:1}
+.sheet-opt .txt h4{font-size:14px;font-weight:600}
+.sheet-opt .txt p{font-size:12px;color:var(--text2);margin-top:2px}
+.hist-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;border:1px solid var(--border);transition:.15s}
+.hist-item .fecha{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.hist-item .fecha .lote{color:var(--text2);font-weight:500;font-size:12px}
+.hist-line{font-size:12.5px;color:var(--text2);padding:3px 0;display:flex;gap:6px}
+.hist-line .ic{flex-shrink:0}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.hist-empty .big{font-size:40px;margin-bottom:12px;opacity:.4}
+.lote-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;cursor:pointer;border:1px solid var(--border);border-left:4px solid var(--success);transition:.15s}
+.lote-item:active{transform:scale(.985)}
+.lote-item.warn{border-left-color:var(--warning)}
+.lote-item.danger{border-left-color:var(--danger)}
+.lote-item h3{font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.lote-item h3 .badge{font-size:10px;background:var(--primary);color:#fff;padding:3px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+[data-theme="dark"] .lote-item h3 .badge{color:#141414}
+.lote-item p{font-size:12.5px;color:var(--text2);margin-top:4px}
+.lote-item .alert{font-size:12px;color:var(--danger);margin-top:6px;font-weight:600}
+.setting-group{margin-bottom:20px}
+.setting-group .group-title{font-size:11.5px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px 4px}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border)}
+.setting-row:first-child{border-radius:var(--radius) var(--radius) 0 0}
+.setting-row:last-child{border-radius:0 0 var(--radius) var(--radius);border-bottom:none}
+.setting-row .lbl{font-size:14px}
+.setting-row .val{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.setting-row .val.chev::after{content:"›";font-size:18px;color:var(--text3)}
+.switch{width:46px;height:26px;border-radius:13px;background:var(--border);position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.switch.on{background:var(--primary)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on::after{left:23px}
+.text-input{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;width:100%;color:var(--text);font-size:15px;outline:none;transition:.15s}
+.text-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,142,35,.12)}
+.text-input::placeholder{color:var(--text3)}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:11px 20px;border-radius:22px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.28s;z-index:100;box-shadow:var(--shadow-lg);white-space:nowrap;max-width:90vw;text-overflow:ellipsis;overflow:hidden}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.calc{background:var(--card2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;color:var(--text2);display:flex;justify-content:space-between;margin-bottom:16px;align-items:center}
+.calc b{color:var(--primary);font-size:15px;font-variant-numeric:tabular-nums}
+.collapse-head{display:flex;justify-content:space-between;align-items:center;padding:14px 0;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--primary);border-top:1px solid var(--border);margin-top:8px}
+.collapse-head .arrow{transition:.2s;font-size:12px}
+.collapse-head.open .arrow{transform:rotate(90deg)}
+.collapse-body{display:none;padding-top:8px}
+.collapse-body.open{display:block;animation:fade .2s}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty .big{font-size:48px;margin-bottom:12px;opacity:.3}
+.empty h3{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty p{font-size:13px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1><span class="logo">🐔</span>Bitácora Avícola</h1>
+    <div class="hbtns">
+      <span class="sync-dot" id="syncDot" title="Estado de sincronización"></span>
+      <button class="hbtn" id="themeBtn" title="Modo oscuro">🌙</button>
+    </div>
+  </div>
+  <div class="main" id="main"></div>
+  <div class="nav">
+    <button class="nav-item active" data-tab="hoy"><span class="ic">🏠</span>Hoy</button>
+    <button class="nav-item" data-tab="historial"><span class="ic">📊</span>Historial</button>
+    <button class="nav-plus" id="plusBtn">+</button>
+    <button class="nav-item" data-tab="lotes"><span class="ic">🐔</span>Lotes</button>
+    <button class="nav-item" data-tab="ajustes"><span class="ic">⚙️</span>Ajustes</button>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"></div>
+
+<div class="screen" id="screen">
+  <div class="screen-header">
+    <button class="back" id="screenBack">←</button>
+    <h2 id="screenTitle">Sección</h2>
+    <button class="action" id="screenAction" style="display:none">Igual que ayer</button>
+  </div>
+  <div class="screen-body" id="screenBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN DE GOOGLE DRIVE
+   ============================================================ */
+const GOOGLE_CLIENT_ID = 'TU_CLIENT_ID.apps.googleusercontent.com';
+const DRIVE_FILE_NAME = 'bitacora_avicola.json';
+
+/* ============================================================
+   DEXIE - BASE DE DATOS LOCAL
+   ============================================================ */
+const db = new Dexie('BitacoraAvicolaDB');
+db.version(1).stores({
+  lotes: 'id',
+  registros: '[loteId+fecha]',
+  eventos: '++id',
+  meta: 'key'
+});
+
+const HOY = () => new Date().toISOString().slice(0,10);
+
+const DEFAULT_LOTES = [
+  { id:'g3', nombre:'Galpón 3', etapa:'postura', semana:45, avesIniciales:1200, avesActuales:1198, linea:'Lohmann Brown' },
+  { id:'g1', nombre:'Galpón 1', etapa:'recria', semana:12, avesIniciales:1500, avesActuales:1497, linea:'Hy-Line Brown' },
+  { id:'g2', nombre:'Galpón 2', etapa:'postura', semana:60, avesIniciales:800, avesActuales:793, linea:'Lohmann Brown' }
+];
+
+let state = null;
+
+/* ---------- CARGA INICIAL ---------- */
+async function inicializarDB(){
+  const count = await db.lotes.count();
+  if(count === 0){
+    await db.lotes.bulkPut(DEFAULT_LOTES);
+    await db.meta.put({key:'loteActual', value:'g3'});
+    await db.meta.put({key:'ajustes', value:{
+      dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1
+    }});
+  }
+}
+
+async function cargarDesdeDexie(){
+  const lotes = await db.lotes.toArray();
+  const registrosArr = await db.registros.toArray();
+  const eventos = await db.eventos.toArray();
+  const metaArr = await db.meta.toArray();
+
+  const registros = {};
+  registrosArr.forEach(r=>{
+    registros[r.loteId+'_'+r.fecha] = {
+      ambiente: r.ambiente || null,
+      produccion: r.produccion || null,
+      sanidad: r.sanidad || null,
+      bienestar: r.bienestar || null
+    };
+  });
+
+  const meta = {};
+  metaArr.forEach(m => meta[m.key] = m.value);
+
+  return {
+    lotes: lotes.length ? lotes : DEFAULT_LOTES,
+    loteActual: meta.loteActual || 'g3',
+    registros,
+    eventos,
+    ajustes: meta.ajustes || { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1 },
+    _lastSaved: meta._lastSaved || 0
+  };
+}
+
+/* ---------- GUARDADO EN DEXIE ---------- */
+let saving = false, savePending = false;
+async function guardarEnDexie(){
+  if(saving){ savePending = true; return; }
+  saving = true;
+  try{
+    await db.transaction('rw', db.lotes, db.registros, db.eventos, db.meta, async ()=>{
+      const lotesExistentes = await db.lotes.toArray();
+      const idsActuales = new Set(state.lotes.map(l=>l.id));
+      for(const le of lotesExistentes){
+        if(!idsActuales.has(le.id)) await db.lotes.delete(le.id);
+      }
+      await db.lotes.bulkPut(state.lotes);
+
+      const regsExistentes = await db.registros.toArray();
+      const keysActuales = new Set(Object.keys(state.registros));
+      for(const re of regsExistentes){
+        const k = re.loteId+'_'+re.fecha;
+        if(!keysActuales.has(k)) await db.registros.delete([re.loteId, re.fecha]);
+      }
+      const regsArr = Object.entries(state.registros).map(([k,v])=>{
+        const idx = k.lastIndexOf('_');
+        return { loteId: k.slice(0, idx), fecha: k.slice(idx+1), ...v };
+      });
+      if(regsArr.length) await db.registros.bulkPut(regsArr);
+
+      await db.eventos.clear();
+      const eventosConId = state.eventos.map((e,i)=>({ ...e, id: e.id || (i+1) }));
+      if(eventosConId.length) await db.eventos.bulkPut(eventosConId);
+
+      state._lastSaved = Date.now();
+      await db.meta.bulkPut([
+        {key:'ajustes', value: state.ajustes},
+        {key:'loteActual', value: state.loteActual},
+        {key:'_lastSaved', value: state._lastSaved}
+      ]);
+    });
+  }catch(e){ console.error('Error Dexie:', e); }
+  saving = false;
+  if(savePending){ savePending = false; guardarEnDexie(); }
+}
+
+function save(){
+  guardarEnDexie().catch(e=>console.error(e));
+  if(accessToken) scheduleDriveSync();
+}
+
+/* ============================================================
+   GOOGLE DRIVE SYNC
+   ============================================================ */
+let tokenClient = null;
+let accessToken = null;
+let driveFileId = null;
+let syncTimeout = null;
+
+function initGoogle(){
+  if(!window.google || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')){
+    document.getElementById('syncDot').title = 'Configura tu GOOGLE_CLIENT_ID';
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.appdata',
+    callback: async (resp)=>{
+      if(resp.error){ setSyncStatus('err'); return; }
+      accessToken = resp.access_token;
+      setSyncStatus('on');
+      await sincronizar();
+    }
+  });
+}
+
+function pedirToken(){
+  if(!tokenClient){ toast('Configura GOOGLE_CLIENT_ID primero'); return; }
+  setSyncStatus('syncing');
+  tokenClient.requestAccessToken();
+}
+
+function setSyncStatus(s){
+  const d = document.getElementById('syncDot');
+  d.classList.remove('on','syncing','err');
+  if(s) d.classList.add(s);
+  d.title = {on:'Sincronizado', syncing:'Sincronizando...', err:'Error de sincronización'}[s] || 'Sin conectar';
+}
+
+function scheduleDriveSync(){
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(()=> sincronizar().catch(()=>{}), 3000);
+}
+
+async function driveFindFile(){
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name,modifiedTime)`,
+    { headers:{ Authorization:'Bearer '+accessToken } }
+  );
+  if(res.status===401){ accessToken=null; setSyncStatus('err'); throw new Error('Token expirado'); }
+  const data = await res.json();
+  return (data.files && data.files[0]) ? data.files[0] : null;
+}
+
+async function driveDownload(fileId){
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers:{ Authorization:'Bearer '+accessToken } }
+  );
+  return res.json();
+}
+
+async function driveUpload(content){
+  const metadata = {
+    name: DRIVE_FILE_NAME,
+    parents: driveFileId ? undefined : ['appDataFolder']
+  };
+  const boundary = '----bitacora' + Date.now();
+  const body =
+    '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(content) + '\r\n' +
+    '--' + boundary + '--';
+
+  const url = driveFileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+
+  const res = await fetch(url, {
+    method: driveFileId ? 'PATCH' : 'POST',
+    headers:{
+      Authorization:'Bearer '+accessToken,
+      'Content-Type':'multipart/related; boundary='+boundary
+    },
+    body
+  });
+  if(!res.ok) throw new Error('Upload falló: '+res.status);
+  return res.json();
+}
+
+async function sincronizar(){
+  if(!accessToken){ pedirToken(); return; }
+  setSyncStatus('syncing');
+  try{
+    const file = await driveFindFile();
+    if(file){
+      driveFileId = file.id;
+      const remote = await driveDownload(file.id);
+      const remoteTs = remote._lastSaved || 0;
+      const localTs = state._lastSaved || 0;
+      if(remoteTs > localTs){
+        state = { ...remote, _lastSaved: remoteTs };
+        await guardarEnDexie();
+        render();
+        toast('Datos actualizados desde Drive');
+      } else if(localTs > remoteTs){
+        await driveUpload(state);
+        toast('Datos respaldados ✓');
+      }
+    } else {
+      await driveUpload(state);
+      toast('Datos respaldados por primera vez');
+    }
+    setSyncStatus('on');
+  }catch(e){
+    console.error('Sync error:', e);
+    setSyncStatus('err');
+    toast('Error de sincronización');
+  }
+}
+
+/* ============================================================
+   EXPORTAR A EXCEL (SheetJS)
+   ============================================================ */
+function exportarExcel(){
+  try{
+    const wb = XLSX.utils.book_new();
+
+    const regs = [];
+    Object.entries(state.registros).forEach(([k,v])=>{
+      const idx = k.lastIndexOf('_');
+      const loteId = k.slice(0, idx);
+      const fecha = k.slice(idx+1);
+      const lote = state.lotes.find(l=>l.id===loteId) || {nombre:loteId};
+      const row = { Fecha: fecha, Lote: lote.nombre };
+      if(v.ambiente){
+        Object.assign(row, {
+          'T° Mín': v.ambiente.tempMin, 'T° Máx': v.ambiente.tempMax, 'T° Prom': v.ambiente.tempProm,
+          'Hum Mín': v.ambiente.humMin, 'Hum Máx': v.ambiente.humMax, 'Hum Prom': v.ambiente.humProm,
+          'Amoniaco': v.ambiente.amoniaco, 'Ventilación': v.ambiente.ventilacion,
+          'Cama': v.ambiente.cama, 'Moscas': v.ambiente.moscas, 'Roedores': v.ambiente.roedores
+        });
+      }
+      if(v.produccion){
+        Object.assign(row, {
+          'Alimento (kg)': v.produccion.alimentoKg,
+          'Huevos': v.produccion.huevos,
+          'No aptos': v.produccion.noAptos,
+          'Peso aves (g)': v.produccion.pesoAves,
+          'Peso huevo (g)': v.produccion.pesoHuevo
+        });
+      }
+      if(v.sanidad){
+        Object.assign(row, {
+          'Muertas': v.sanidad.muertas,
+          'Enfermas': v.sanidad.enfermas,
+          'Descartadas': v.sanidad.descartadas,
+          'Causa': v.sanidad.causa
+        });
+      }
+      if(v.bienestar){
+        Object.assign(row, {
+          'Plumas': v.bienestar.plumas,
+          'Lesiones': v.bienestar.lesiones,
+          'Pododermatitis': v.bienestar.podo
+        });
+      }
+      regs.push(row);
+    });
+    regs.sort((a,b)=> (b.Fecha||'').localeCompare(a.Fecha||''));
+    if(regs.length){
+      const ws1 = XLSX.utils.json_to_sheet(regs);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+    }
+
+    if(state.eventos.length){
+      const evs = state.eventos.map(e=>{
+        const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
+        return {
+          Fecha: e.fecha ? new Date(e.fecha).toLocaleString('es-MX') : '',
+          Lote: lote.nombre,
+          Tipo: e.tipo, Subtipo: e.subtipo,
+          Producto: e.producto, Dosis: e.dosis,
+          'Días retiro': e.retiro,
+          Responsable: e.responsable, Motivo: e.motivo
+        };
+      });
+      const ws2 = XLSX.utils.json_to_sheet(evs);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
+    }
+
+    const resumen = state.lotes.map(l=>{
+      const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
+      const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
+      const totalMuertas = regsLote.reduce((s,[,v])=> s + (v.sanidad?.muertas||0), 0);
+      return {
+        Lote: l.nombre,
+        Etapa: l.etapa,
+        Semana: l.semana,
+        'Aves actuales': l.avesActuales,
+        'Días registrados': regsLote.length,
+        'Total huevos': totalHuevos,
+        'Total muertas': totalMuertas,
+        'Mortalidad %': l.avesIniciales ? ((totalMuertas/l.avesIniciales)*100).toFixed(2) : 0
+      };
+    });
+    const ws3 = XLSX.utils.json_to_sheet(resumen);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+
+    XLSX.writeFile(wb, `bitacora_${HOY()}.xlsx`);
+    toast('Excel exportado ✓');
+  }catch(e){
+    console.error(e);
+    toast('Error al exportar');
+  }
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function lote(){ return state.lotes.find(l=>l.id===state.loteActual) || state.lotes[0]; }
+function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function regKey(fecha, id){ return (id||state.loteActual)+'_'+(fecha||HOY()); }
+
+function getReg(fecha, id){
+  const k = regKey(fecha, id);
+  if(!state.registros[k]){
+    state.registros[k] = { ambiente:null, produccion:null, sanidad:null, bienestar:null };
+  }
+  return state.registros[k];
+}
+function setReg(seccion, data, fecha){
+  const r = getReg(fecha);
+  r[seccion] = { ...(r[seccion]||{}), ...data, _ts: Date.now() };
+  save();
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+/* ============================================================
+   TEMA
+   ============================================================ */
+function aplicarTema(){
+  if(state.ajustes.dark){
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('themeBtn').textContent = '☀️';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeBtn').textContent = '🌙';
+  }
+}
+document.getElementById('themeBtn').onclick = () => {
+  state.ajustes.dark = !state.ajustes.dark;
+  save(); aplicarTema();
+};
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+let tabActual = 'hoy';
+document.querySelectorAll('.nav-item').forEach(b=>{
+  b.onclick = () => { tabActual = b.dataset.tab; render(); };
+});
+
+function render(){
+  if(!state) return;
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab === tabActual);
+  });
+  const m = document.getElementById('main');
+  if(tabActual==='hoy')            m.innerHTML = viewHoy();
+  else if(tabActual==='historial') m.innerHTML = viewHistorial();
+  else if(tabActual==='lotes')     m.innerHTML = viewLotes();
+  else if(tabActual==='ajustes')   m.innerHTML = viewAjustes();
+  bindMain();
+  m.scrollTop = 0;
+}
+
+/* ============================================================
+   VISTA: HOY
+   ============================================================ */
+function viewHoy(){
+  const l = lote();
+  if(!l){
+    return `<div class="empty"><div class="big">🐔</div><h3>Sin lotes</h3><p>Crea un lote en la pestaña Lotes</p></div>`;
+  }
+  const r = getReg();
+  const secciones = [
+    { k:'ambiente',   ic:'🌡️', t:'Ambiente'   },
+    { k:'produccion', ic:'🥚', t:'Producción' },
+    { k:'sanidad',    ic:'🩺', t:'Sanidad'    },
+    { k:'bienestar',  ic:'🐔', t:'Bienestar'  }
+  ];
+  const visibles = secciones.filter(s=>!(s.k==='produccion' && l.etapa==='recria'));
+  const completas = visibles.filter(s=>r[s.k]).length;
+  const total = visibles.length;
+
+  let html = `
+    <div class="lote-card" id="selLote">
+      <div class="info">
+        <h3><span class="dot" id="loteDot"></span>${l.nombre} ▾</h3>
+        <p>${cap(l.etapa)} · Semana ${l.semana} · ${l.avesActuales} aves</p>
+      </div>
+      <span class="chev">›</span>
+    </div>
+    <div class="progress-card">
+      <div class="lbl"><span>Progreso de hoy</span><b>${completas}/${total}</b></div>
+      <div class="progress-bar"><span style="width:${total?(completas/total)*100:0}%"></span></div>
+    </div>
+  `;
+
+  visibles.forEach(s=>{
+    const data = r[s.k];
+    let status='pending', icon='⏳', summary='Sin registrar';
+    if(data){
+      status='ok'; icon='✅';
+      summary = resumenSeccion(s.k, data, l);
+      if(s.k==='sanidad' && data.muertas>0 && l.avesActuales>0){
+        const pct = data.muertas / l.avesActuales * 100;
+        if(pct > state.ajustes.umbralMort){ status='alert'; icon='⚠️'; }
+      }
+    }
+    html += `
+      <div class="section-card ${status}" data-sec="${s.k}">
+        <div class="row">
+          <div class="title"><span class="ic">${s.ic}</span>${s.t}</div>
+          <div class="status">${icon}</div>
+        </div>
+        <div class="summary">${summary}</div>
+      </div>
+    `;
+  });
+
+  html += `
+    <div class="quick-card">
+      <h4>Acciones rápidas</h4>
+      <div class="quick-grid">
+        <button class="quick-btn" data-q="muertas"><span class="ic">💀</span>+ Mortalidad</button>
+        <button class="quick-btn" data-q="huevos"><span class="ic">🥚</span>+ Huevos</button>
+        <button class="quick-btn" data-q="alimento"><span class="ic">🌾</span>+ Alimento</button>
+        <button class="quick-btn" data-q="agua"><span class="ic">💧</span>+ Agua</button>
+      </div>
+    </div>
+  `;
+
+  const hoy = new Date().getDay();
+  const recs = [];
+  if(hoy === state.ajustes.pesoDia && (!r.produccion || !r.produccion.pesoAves) && l.etapa!=='recria'){
+    recs.push({ id:'peso', ic:'⚖️', titulo:'Peso semanal pendiente', sub:'Toca para registrar' });
+  }
+  recs.push({ id:'limpieza', ic:'🧹', titulo:'Limpieza programada hoy', sub:'Registrar en Bioseguridad' });
+  html += recs.map(rec=>`
+    <div class="reminder" data-rem="${rec.id}">
+      <span class="ic">${rec.ic}</span>
+      <div class="txt"><b>${rec.titulo}</b><span>${rec.sub}</span></div>
+    </div>
+  `).join('');
+
+  return html;
+}
+
+function resumenSeccion(k, d, l){
+  if(k==='ambiente'){
+    const p=[];
+    if(d.tempProm) p.push(d.tempProm+'°C');
+    if(d.humProm) p.push(d.humProm+'%');
+    if(d.amoniaco) p.push('Amoniaco '+d.amoniaco);
+    return p.join(' · ') || 'Registrado';
+  }
+  if(k==='produccion'){
+    const p=[];
+    if(d.huevos!=null){
+      p.push(d.huevos+' huevos');
+      if(l.avesActuales) p.push(Math.round(d.huevos/l.avesActuales*100)+'% postura');
+    }
+    return p.join(' · ') || 'Registrado';
+  }
+  if(k==='sanidad'){
+    const p=[];
+    if(d.muertas) p.push(d.muertas+' muertas');
+    if(d.enfermas) p.push(d.enfermas+' enfermas');
+    if(d.descartadas) p.push(d.descartadas+' descartadas');
+    if(!p.length) p.push('Sin novedades');
+    return p.join(' · ');
+  }
+  if(k==='bienestar'){
+    const p=[];
+    if(d.plumas) p.push('Plumas '+d.plumas);
+    if(d.lesiones && d.lesiones!=='ninguna') p.push('Lesiones '+d.lesiones);
+    if(!p.length) p.push('Registrado');
+    return p.join(' · ');
+  }
+  return 'Registrado';
+}
+
+/* ============================================================
+   VISTA: HISTORIAL
+   ============================================================ */
+function viewHistorial(){
+  const keys = Object.keys(state.registros).sort().reverse().slice(0,60);
+  if(!keys.length){
+    return `<div class="empty"><div class="big">📊</div><h3>Sin registros aún</h3><p>Empieza a registrar en la pestaña Hoy</p></div>`;
+  }
+  let html = '';
+  keys.forEach(k=>{
+    const idx = k.lastIndexOf('_');
+    const lid = k.slice(0, idx);
+    const fecha = k.slice(idx+1);
+    const l = state.lotes.find(x=>x.id===lid) || { nombre:lid };
+    const r = state.registros[k];
+    const lineas = [];
+    if(r.ambiente){
+      const a=r.ambiente;
+      lineas.push(`<div class="hist-line"><span class="ic">🌡️</span>${a.tempProm||'?'}°C · ${a.humProm||'?'}% · Amoniaco ${a.amoniaco||'?'}</div>`);
+    }
+    if(r.produccion){
+      const p=r.produccion;
+      if(p.huevos!=null) lineas.push(`<div class="hist-line"><span class="ic">🥚</span>${p.huevos} huevos${p.noAptos?' · '+p.noAptos+' no aptos':''}</div>`);
+      if(p.alimentoKg) lineas.push(`<div class="hist-line"><span class="ic">🌾</span>${p.alimentoKg} kg alimento</div>`);
+    }
+    if(r.sanidad){
+      const s=r.sanidad;
+      const partes=[];
+      if(s.muertas) partes.push(s.muertas+' muertas');
+      if(s.enfermas) partes.push(s.enfermas+' enfermas');
+      if(s.descartadas) partes.push(s.descartadas+' descartadas');
+      if(partes.length) lineas.push(`<div class="hist-line"><span class="ic">🩺</span>${partes.join(' · ')}</div>`);
+    }
+    if(r.bienestar){
+      const b=r.bienestar;
+      lineas.push(`<div class="hist-line"><span class="ic">🐔</span>Plumas ${b.plumas||'?'} · Lesiones ${b.lesiones||'?'}</div>`);
+    }
+    html += `
+      <div class="hist-item">
+        <div class="fecha"><span>${formatFecha(fecha)}</span><span class="lote">${l.nombre}</span></div>
+        ${lineas.join('') || '<div class="hist-line">Sin datos</div>'}
+      </div>
+    `;
+  });
+  return html;
+}
+
+function formatFecha(f){
+  const hoy = HOY();
+  const ayer = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if(f===hoy) return 'Hoy';
+  if(f===ayer) return 'Ayer';
+  const [y,m,d] = f.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/* ============================================================
+   VISTA: LOTES (ahora con menú de opciones)
+   ============================================================ */
+function viewLotes(){
+  if(!state.lotes.length){
+    return `<div class="empty"><div class="big">🐔</div><h3>Sin lotes</h3><p>Crea el primer lote</p></div>
+      <button class="save-btn ghost" id="newLoteBtn" style="margin-top:12px">+ Nuevo lote</button>`;
+  }
+  let html = '';
+  state.lotes.forEach(l=>{
+    const r = getReg(HOY(), l.id);
+    const completas = ['ambiente','produccion','sanidad','bienestar'].filter(k=>{
+      if(k==='produccion' && l.etapa==='recria') return false;
+      return r[k];
+    }).length;
+    let cls='', alerta='';
+    if(completas===0) cls='warn';
+    if(r.sanidad && r.sanidad.muertas>0 && (r.sanidad.muertas/l.avesActuales*100)>state.ajustes.umbralMort){
+      cls='danger'; alerta='⚠️ Mortalidad alta hoy';
+    }
+    const esActual = l.id===state.loteActual;
+    html += `
+      <div class="lote-item ${cls}" data-lote="${l.id}">
+        <h3>${l.nombre} ${esActual?'<span class="badge">actual</span>':''}</h3>
+        <p>${cap(l.etapa)} · Semana ${l.semana} · ${l.avesActuales} aves</p>
+        <p style="margin-top:6px;font-size:12px;color:var(--text3)">Hoy: ${completas}/4 secciones</p>
+        ${alerta?`<div class="alert">${alerta}</div>`:''}
+      </div>
+    `;
+  });
+  html += `<button class="save-btn ghost" id="newLoteBtn" style="margin-top:12px">+ Nuevo lote</button>`;
+  return html;
+}
+
+/* ============================================================
+   VISTA: AJUSTES
+   ============================================================ */
+function viewAjustes(){
+  const a = state.ajustes;
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const conectado = !!accessToken;
+  const lastSaved = state._lastSaved ? new Date(state._lastSaved).toLocaleString('es-MX') : 'Nunca';
+  return `
+    <div class="setting-group">
+      <div class="group-title">General</div>
+      <div class="setting-row">
+        <span class="lbl">Modo oscuro</span>
+        <div class="switch ${a.dark?'on':''}" data-set="dark"></div>
+      </div>
+      <div class="setting-row">
+        <span class="lbl">Almacenar huevos</span>
+        <div class="switch ${a.almacenaHuevos?'on':''}" data-set="almacenaHuevos"></div>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="group-title">Registro</div>
+      <div class="setting-row" data-act="editUmbral">
+        <span class="lbl">Umbral mortalidad diaria</span>
+        <span class="val chev">${a.umbralMort}%</span>
+      </div>
+      <div class="setting-row" data-act="editPesoDia">
+        <span class="lbl">Día de peso semanal</span>
+        <span class="val chev">${dias[a.pesoDia]}</span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="group-title">Datos</div>
+      <div class="setting-row" data-act="exportExcel">
+        <span class="lbl">📊 Exportar a Excel (.xlsx)</span>
+        <span class="val chev"></span>
+      </div>
+      <div class="setting-row" data-act="exportJSON">
+        <span class="lbl">💾 Exportar copia (JSON)</span>
+        <span class="val chev"></span>
+      </div>
+      <div class="setting-row" data-act="importJSON">
+        <span class="lbl">📥 Importar copia (JSON)</span>
+        <span class="val chev"></span>
+      </div>
+      <div class="setting-row" data-act="reset">
+        <span class="lbl" style="color:var(--danger)">Borrar todos los datos</span>
+        <span class="val chev"></span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="group-title">Sincronización (Google Drive)</div>
+      <div class="setting-row" data-act="sync">
+        <span class="lbl">${conectado?'🔄 Sincronizar ahora':'🔗 Conectar con Google Drive'}</span>
+        <span class="val">${conectado?'Conectado':'—'}</span>
+      </div>
+      ${conectado?`
+        <div class="setting-row" data-act="disconnect">
+          <span class="lbl" style="color:var(--danger)">Desconectar</span>
+          <span class="val chev"></span>
+        </div>
+      `:''}
+      <div class="setting-row">
+        <span class="lbl" style="font-size:12px;color:var(--text3)">Último guardado</span>
+        <span class="val" style="font-size:11px">${lastSaved}</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:var(--text3);font-size:11.5px;margin-top:24px;line-height:1.6">
+      Bitácora Avícola · v2.1<br>
+      Datos locales + Google Drive
+    </div>
+  `;
+}
+
+/* ============================================================
+   BIND MAIN
+   ============================================================ */
+function bindMain(){
+  const selLote = document.getElementById('selLote');
+  if(selLote) selLote.onclick = abrirSelectorLote;
+
+  document.querySelectorAll('.section-card').forEach(c=>{
+    c.onclick = ()=> abrirSeccion(c.dataset.sec);
+  });
+  document.querySelectorAll('.quick-btn').forEach(b=>{
+    b.onclick = ()=> quickAction(b.dataset.q);
+  });
+  document.querySelectorAll('.reminder').forEach(r=>{
+    r.onclick = ()=>{
+      if(r.dataset.rem==='peso') abrirSeccion('produccion', true);
+      else if(r.dataset.rem==='limpieza') abrirEvento('bioseg');
+    };
+  });
+
+  // ✅ CAMBIO: Ahora abre el menú de opciones en lugar de seleccionar directamente
+  document.querySelectorAll('.lote-item').forEach(x=>{
+    x.onclick = ()=> abrirOpcionesLote(x.dataset.lote);
+  });
+
+  const newLoteBtn = document.getElementById('newLoteBtn');
+  if(newLoteBtn) newLoteBtn.onclick = nuevoLote;
+
+  document.querySelectorAll('[data-set]').forEach(s=>{
+    s.onclick = ()=>{
+      const k=s.dataset.set;
+      state.ajustes[k]=!state.ajustes[k];
+      save();
+      if(k==='dark') aplicarTema();
+      render();
+    };
+  });
+  document.querySelectorAll('[data-act]').forEach(s=>{
+    s.onclick = ()=> accionAjuste(s.dataset.act);
+  });
+}
+
+/* ============================================================
+   ACCIONES RÁPIDAS
+   ============================================================ */
+function quickAction(q){
+  const config = {
+    muertas:  { label:'¿Cuántas aves muertas hoy?', campo:'muertas', sec:'sanidad' },
+    huevos:   { label:'¿Cuántos huevos recolectados?', campo:'huevos', sec:'produccion' },
+    alimento: { label:'¿Cuántos kg de alimento?', campo:'alimentoKg', sec:'produccion' },
+    agua:     { label:'Consumo de agua (normal/bajo/alto)', campo:'aguaConsumo', sec:'ambiente' }
+  };
+  const c = config[q];
+  if(!c) return;
+  const val = prompt(c.label);
+  if(val==null || val.trim()==='') return;
+  const r = getReg();
+  const prev = r[c.sec] || {};
+
+  if(q==='agua'){
+    const v = val.toLowerCase();
+    if(!['normal','bajo','alto'].includes(v)){ toast('Valor no válido'); return; }
+    setReg('ambiente', {...prev, aguaConsumo: v});
+  } else {
+    const n = parseFloat(val);
+    if(isNaN(n) || n<0){ toast('Número inválido'); return; }
+    if(q==='muertas'){
+      const l = lote();
+      l.avesActuales = Math.max(0, l.avesActuales - n);
+      const acum = (prev.muertasAcum || 0) + n;
+      setReg('sanidad', {...prev, muertas:(prev.muertas||0)+n, muertasAcum: acum});
+    } else {
+      setReg(c.sec, {...prev, [c.campo]: (prev[c.campo]||0) + n});
+    }
+  }
+  render();
+  toast('Registrado ✓');
+}
+
+/* ============================================================
+   SELECTOR DE LOTE (desde el header)
+   ============================================================ */
+function abrirSelectorLote(){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="drag"></div>
+    <h3>Seleccionar lote</h3>
+    ${state.lotes.map(l=>`
+      <div class="sheet-opt" data-lote="${l.id}">
+        <span class="ic">🐔</span>
+        <div class="txt">
+          <h4>${l.nombre} ${l.id===state.loteActual?'· actual':''}</h4>
+          <p>${cap(l.etapa)} · Semana ${l.semana} · ${l.avesActuales} aves</p>
+        </div>
+      </div>
+    `).join('')}
+    <button class="save-btn ghost" id="sheetNewLote" style="margin-top:12px">+ Nuevo lote</button>
+  `;
+  sheet.querySelectorAll('[data-lote]').forEach(x=>{
+    x.onclick = ()=>{
+      state.loteActual = x.dataset.lote;
+      save(); cerrarSheet(); render();
+      toast('Lote: '+lote().nombre);
+    };
+  });
+  document.getElementById('sheetNewLote').onclick = ()=>{ cerrarSheet(); nuevoLote(); };
+  abrirSheet();
+}
+
+/* ============================================================
+   ✅ NUEVO: OPCIONES DE LOTE (Seleccionar / Editar / Eliminar)
+   ============================================================ */
+function abrirOpcionesLote(loteId){
+  const l = state.lotes.find(x=>x.id===loteId);
+  if(!l) return;
+  const esActual = l.id === state.loteActual;
+
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="drag"></div>
+    <h3>${l.nombre}</h3>
+    <div class="sheet-opt" data-opt="select">
+      <span class="ic">✅</span>
+      <div class="txt">
+        <h4>${esActual?'Ya está seleccionado':'Seleccionar este lote'}</h4>
+        <p>${cap(l.etapa)} · Semana ${l.semana} · ${l.avesActuales} aves</p>
+      </div>
+    </div>
+    <div class="sheet-opt" data-opt="edit">
+      <span class="ic">✏️</span>
+      <div class="txt"><h4>Editar información</h4><p>Nombre, etapa, aves, línea genética</p></div>
+    </div>
+    <div class="sheet-opt" data-opt="delete" style="${state.lotes.length<=1?'opacity:.5;pointer-events:none':''}">
+      <span class="ic">🗑️</span>
+      <div class="txt"><h4 style="color:var(--danger)">Eliminar lote</h4><p>Borra el lote y todos sus registros</p></div>
+    </div>
+  `;
+
+  sheet.querySelector('[data-opt="select"]').onclick = ()=>{
+    state.loteActual = l.id;
+    save(); cerrarSheet(); tabActual='hoy'; render();
+    toast('Lote: '+l.nombre);
+  };
+  sheet.querySelector('[data-opt="edit"]').onclick = ()=>{
+    cerrarSheet();
+    setTimeout(()=> abrirFormLote(l.id), 150);
+  };
+  sheet.querySelector('[data-opt="delete"]').onclick = ()=>{
+    if(state.lotes.length<=1) return;
+    if(confirm(`¿Eliminar "${l.nombre}" y TODOS sus registros?\n\nEsta acción no se puede deshacer.`)){
+      Object.keys(state.registros).forEach(k=>{
+        if(k.startsWith(l.id+'_')) delete state.registros[k];
+      });
+      state.eventos = state.eventos.filter(e=> e.loteId !== l.id);
+      state.lotes = state.lotes.filter(x=> x.id !== l.id);
+      if(state.loteActual === l.id){
+        state.loteActual = state.lotes[0]?.id || null;
+      }
+      save(); cerrarSheet(); render();
+      toast('Lote eliminado');
+    }
+  };
+
+  abrirSheet();
+}
+
+/* ============================================================
+   ✅ NUEVO: FORMULARIO DE LOTE (Crear / Editar)
+   ============================================================ */
+function abrirFormLote(loteId){
+  const esEdicion = !!loteId;
+  const l = esEdicion ? state.lotes.find(x=>x.id===loteId) : null;
+
+  const screen = document.getElementById('screen');
+  const title  = document.getElementById('screenTitle');
+  const body   = document.getElementById('screenBody');
+  const action = document.getElementById('screenAction');
+  action.style.display = 'none';
+  title.textContent = esEdicion ? '✏️ Editar lote' : '🐔 Nuevo lote';
+
+  body.innerHTML = `
+    <div class="field">
+      <label>Nombre del lote</label>
+      <input type="text" class="text-input" id="fNombre" value="${l?.nombre||''}" placeholder="Ej: Galpón 4">
+    </div>
+
+    <div class="field">
+      <label>Etapa</label>
+      <div class="chips" id="fEtapa">
+        <button type="button" class="chip ${l?.etapa==='recria'?'on':''}" data-v="recria">Recría</button>
+        <button type="button" class="chip ${l?.etapa==='pre-postura'?'on':''}" data-v="pre-postura">Pre-postura</button>
+        <button type="button" class="chip ${l?.etapa==='postura'?'on':''}" data-v="postura">Postura</button>
+        <button type="button" class="chip ${l?.etapa==='descarte'?'on':''}" data-v="descarte">Descarte</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Línea genética / híbrido</label>
+      <input type="text" class="text-input" id="fLinea" value="${l?.linea||''}" placeholder="Ej: Lohmann Brown">
+    </div>
+
+    <div class="field">
+      <label>Semana de edad</label>
+      <div class="input-row one">
+        <div class="num-input"><input type="number" inputmode="numeric" id="fSemana" value="${l?.semana??''}" placeholder="1"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Aves iniciales</label>
+      <div class="input-row one">
+        <div class="num-input"><input type="number" inputmode="numeric" id="fAvesIni" value="${l?.avesIniciales??''}" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Aves actuales</label>
+      <div class="input-row one">
+        <div class="num-input"><input type="number" inputmode="numeric" id="fAvesAct" value="${l?.avesActuales??''}" placeholder="0"></div>
+      </div>
+    </div>
+
+    ${esEdicion ? `
+      <div class="reminder" style="margin-bottom:16px">
+        <span class="ic">⚠️</span>
+        <div class="txt">
+          <b>Editar aves actuales</b>
+          <span>Cambiar este valor no borra registros, solo ajusta el conteo</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <button class="save-btn" id="saveLote">${esEdicion?'Guardar cambios':'Crear lote'}</button>
+    ${esEdicion?`<button class="save-btn danger" id="deleteLote" style="margin-top:10px">🗑️ Eliminar este lote</button>`:''}
+  `;
+
+  body.querySelectorAll('#fEtapa .chip').forEach(c=>{
+    c.onclick = ()=>{
+      body.querySelectorAll('#fEtapa .chip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');
+    };
+  });
+
+  document.getElementById('saveLote').onclick = ()=>{
+    const nombre = document.getElementById('fNombre').value.trim();
+    if(!nombre){ toast('Falta el nombre'); return; }
+    const etapaOn = body.querySelector('#fEtapa .chip.on');
+    const etapa = etapaOn ? etapaOn.dataset.v : 'recria';
+    const linea = document.getElementById('fLinea').value.trim() || '—';
+    const semana = parseInt(document.getElementById('fSemana').value) || 1;
+    const avesIni = parseInt(document.getElementById('fAvesIni').value) || 0;
+    const avesAct = parseInt(document.getElementById('fAvesAct').value) || avesIni;
+
+    if(esEdicion){
+      l.nombre = nombre;
+      l.etapa = etapa;
+      l.linea = linea;
+      l.semana = semana;
+      l.avesIniciales = avesIni;
+      l.avesActuales = avesAct;
+      toast('Lote actualizado ✓');
+    } else {
+      const id = 'lote_'+Date.now();
+      state.lotes.push({
+        id, nombre, etapa, linea, semana,
+        avesIniciales: avesIni,
+        avesActuales: avesAct
+      });
+      state.loteActual = id;
+      toast('Lote creado ✓');
+    }
+    save();
+    screen.classList.remove('open');
+    render();
+  };
+
+  const delBtn = document.getElementById('deleteLote');
+  if(delBtn) delBtn.onclick = ()=>{
+    if(state.lotes.length<=1){ toast('No puedes borrar el último lote'); return; }
+    if(confirm(`¿Eliminar "${l.nombre}" y TODOS sus registros?`)){
+      Object.keys(state.registros).forEach(k=>{
+        if(k.startsWith(l.id+'_')) delete state.registros[k];
+      });
+      state.eventos = state.eventos.filter(e=> e.loteId !== l.id);
+      state.lotes = state.lotes.filter(x=> x.id !== l.id);
+      if(state.loteActual === l.id){
+        state.loteActual = state.lotes[0]?.id || null;
+      }
+      save();
+      screen.classList.remove('open');
+      render();
+      toast('Lote eliminado');
+    }
+  };
+
+  screen.classList.add('open');
+}
+
+/* ============================================================
+   NUEVO LOTE (abre el formulario visual)
+   ============================================================ */
+function nuevoLote(){
+  abrirFormLote(null);
+}
+
+/* ============================================================
+   HOJA INFERIOR
+   ============================================================ */
+const sheetEl = document.getElementById('sheet');
+const sheetBg = document.getElementById('sheetBg');
+function abrirSheet(){ sheetEl.classList.add('open'); sheetBg.classList.add('open'); }
+function cerrarSheet(){ sheetEl.classList.remove('open'); sheetBg.classList.remove('open'); }
+sheetBg.onclick = cerrarSheet;
+
+document.getElementById('plusBtn').onclick = ()=>{
+  sheetEl.innerHTML = `
+    <div class="drag"></div>
+    <h3>Registrar evento</h3>
+    <div class="sheet-opt" data-ev="sanidad"><span class="ic">💉</span><div class="txt"><h4>Sanidad</h4><p>Tratamiento, vacuna, vitamina, necropsia</p></div></div>
+    <div class="sheet-opt" data-ev="bioseg"><span class="ic">🧹</span><div class="txt"><h4>Bioseguridad</h4><p>Limpieza, vacío, disposición</p></div></div>
+    <div class="sheet-opt" data-ev="equipos"><span class="ic">⚙️</span><div class="txt"><h4>Equipos</h4><p>Mantenimiento preventivo o correctivo</p></div></div>
+    <div class="sheet-opt" data-ev="admin"><span class="ic">📦</span><div class="txt"><h4>Administrativo</h4><p>Compras, ventas, entradas/salidas</p></div></div>
+  `;
+  sheetEl.querySelectorAll('[data-ev]').forEach(x=>{
+    x.onclick = ()=>{ cerrarSheet(); setTimeout(()=>abrirEvento(x.dataset.ev), 150); };
+  });
+  abrirSheet();
+};
+
+/* ============================================================
+   ABRIR SECCIÓN
+   ============================================================ */
+function abrirSeccion(k, abrirPeso){
+  const screen = document.getElementById('screen');
+  const title  = document.getElementById('screenTitle');
+  const body   = document.getElementById('screenBody');
+  const action = document.getElementById('screenAction');
+  const r = getReg();
+  const l = lote();
+  const titles = { ambiente:'🌡️ Ambiente', produccion:'🥚 Producción', sanidad:'🩺 Sanidad', bienestar:'🐔 Bienestar' };
+  title.textContent = titles[k];
+  const mostrarCopiar = (k==='ambiente' || k==='produccion');
+  action.style.display = mostrarCopiar ? 'block' : 'none';
+  action.onclick = ()=> copiarAyer(k);
+
+  if(k==='ambiente')        body.innerHTML = formAmbiente(r.ambiente||{});
+  else if(k==='produccion') body.innerHTML = formProduccion(r.produccion||{}, l);
+  else if(k==='sanidad')    body.innerHTML = formSanidad(r.sanidad||{}, l);
+  else if(k==='bienestar')  body.innerHTML = formBienestar(r.bienestar||{});
+
+  bindForm(k);
+  screen.classList.add('open');
+  if(abrirPeso){
+    setTimeout(()=>{
+      const head = body.querySelector('.collapse-head[data-col="semanal"]');
+      if(head && !head.classList.contains('open')) head.click();
+    }, 300);
+  }
+}
+document.getElementById('screenBack').onclick = ()=>{
+  document.getElementById('screen').classList.remove('open');
+};
+
+/* ============================================================
+   FORMULARIOS
+   ============================================================ */
+function chipsHTML(name, opts, val){
+  return `<div class="chips" data-name="${name}">
+    ${opts.map(o=>`<button type="button" class="chip ${val===o.v?'on':''}" data-v="${o.v}">${o.t}</button>`).join('')}
+  </div>`;
+}
+function checksHTML(name, opts, valArr){
+  valArr = valArr || [];
+  return `<div class="checks" data-name="${name}">
+    ${opts.map(o=>{
+      const on = valArr.includes(o.v);
+      return `<div class="check ${on?'on':''}" data-v="${o.v}">
+        <div class="box">${on?'✓':''}</div>${o.t}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function formAmbiente(d){
+  return `
+    <div class="field"><label>Temperatura interior (°C)</label>
+      <div class="input-row">
+        <div class="num-input"><div class="cap">Mín</div><input type="number" inputmode="decimal" data-n="tempMin" value="${d.tempMin??''}"></div>
+        <div class="num-input"><div class="cap">Máx</div><input type="number" inputmode="decimal" data-n="tempMax" value="${d.tempMax??''}"></div>
+        <div class="num-input"><div class="cap">Prom</div><input type="number" inputmode="decimal" data-n="tempProm" value="${d.tempProm??''}"></div>
+      </div>
+    </div>
+    <div class="field"><label>Humedad relativa (%)</label>
+      <div class="input-row">
+        <div class="num-input"><div class="cap">Mín</div><input type="number" inputmode="decimal" data-n="humMin" value="${d.humMin??''}"></div>
+        <div class="num-input"><div class="cap">Máx</div><input type="number" inputmode="decimal" data-n="humMax" value="${d.humMax??''}"></div>
+        <div class="num-input"><div class="cap">Prom</div><input type="number" inputmode="decimal" data-n="humProm" value="${d.humProm??''}"></div>
+      </div>
+    </div>
+    <div class="field"><label>Amoniaco</label>${chipsHTML('amoniaco',[
+      {v:'nulo',t:'Nulo'},{v:'leve',t:'Leve'},{v:'moderado',t:'Moderado'},{v:'fuerte',t:'Fuerte'},{v:'insoportable',t:'Insoportable'}
+    ], d.amoniaco)}</div>
+    <div class="field"><label>Olor general</label>${chipsHTML('olor',[
+      {v:'normal',t:'Normal'},{v:'fuerte',t:'Fuerte'},{v:'desagradable',t:'Desagradable'}
+    ], d.olor)}</div>
+    <div class="field"><label>Ventilación</label>${chipsHTML('ventilacion',[
+      {v:'sin',t:'Sin corrientes'},{v:'suave',t:'Suave'},{v:'moderada',t:'Moderada'},{v:'fuerte',t:'Fuerte'},{v:'excesiva',t:'Excesiva'}
+    ], d.ventilacion)}</div>
+    <div class="field"><label>Iluminación</label>
+      <div class="input-row two">
+        <div class="num-input"><div class="cap">Horas luz</div><input type="number" inputmode="decimal" data-n="luz" value="${d.luz??''}"></div>
+        <div class="num-input"><div class="cap">Horas osc.</div><input type="number" inputmode="decimal" data-n="osc" value="${d.osc??''}"></div>
+      </div>
+    </div>
+    <div class="field"><label>Intensidad lumínica</label>${chipsHTML('intensidad',[
+      {v:'oscuro',t:'Oscuro'},{v:'tenue',t:'Tenue'},{v:'adecuado',t:'Adecuado'},{v:'brillante',t:'Brillante'},{v:'excesivo',t:'Excesivo'}
+    ], d.intensidad)}</div>
+    <div class="field"><label>Estado del agua</label>${chipsHTML('aguaEstado',[
+      {v:'limpia',t:'Limpia'},{v:'turbia',t:'Turbia'},{v:'sedimento',t:'Con sedimento'},{v:'olor',t:'Con olor'}
+    ], d.aguaEstado)}</div>
+    <div class="field"><label>Consumo de agua</label>${chipsHTML('aguaConsumo',[
+      {v:'normal',t:'Normal'},{v:'bajo',t:'Bajo'},{v:'alto',t:'Alto'}
+    ], d.aguaConsumo)}</div>
+    <div class="field"><label>Cama</label>${chipsHTML('cama',[
+      {v:'seca',t:'Seca'},{v:'humeda',t:'Húmeda'},{v:'apelmazada',t:'Apelmazada'},{v:'costras',t:'Con costras'},{v:'polvorienta',t:'Polvorienta'},{v:'moho',t:'Con moho'}
+    ], d.cama)}</div>
+    <div class="field"><label>Polvo</label>${chipsHTML('polvo',[
+      {v:'nulo',t:'Nulo'},{v:'poco',t:'Poco'},{v:'moderado',t:'Moderado'},{v:'mucho',t:'Mucho'}
+    ], d.polvo)}</div>
+    <div class="field"><label>Moscas</label>${chipsHTML('moscas',[
+      {v:'nula',t:'Nula'},{v:'poca',t:'Poca'},{v:'media',t:'Media'},{v:'mucha',t:'Mucha'}
+    ], d.moscas)}</div>
+    <div class="field"><label>Roedores</label>${chipsHTML('roedores',[
+      {v:'no',t:'No se ven'},{v:'indicios',t:'Indicios'},{v:'avist',t:'Avistamientos'}
+    ], d.roedores)}</div>
+    <div class="field"><label>Notas</label>
+      <input type="text" class="text-input" data-n="notas" value="${d.notas||''}" placeholder="Observaciones...">
+    </div>
+    <button class="save-btn" id="saveSec">Guardar sección</button>
+  `;
+}
+
+function formProduccion(d, l){
+  const postura = (d.huevos && l.avesActuales) ? Math.round(d.huevos/l.avesActuales*100) : 0;
+  const noAptos = d.noAptos || 0;
+  const vendibles = (d.huevos||0) - noAptos;
+  return `
+    <div class="calc"><span>Postura estimada</span><b>${postura}%</b></div>
+    <div class="field"><label>Consumo de alimento</label>${chipsHTML('alimento',[
+      {v:'normal',t:'Normal'},{v:'bajo',t:'Bajo'},{v:'alto',t:'Alto'}
+    ], d.alimento)}</div>
+    <div class="field"><label>Cantidad de alimento (kg)</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="alimentoKg" value="${d.alimentoKg??''}" placeholder="0"></div></div>
+    </div>
+    <div class="field"><label>Tipo / marca / lote (si cambió)</label>
+      <input type="text" class="text-input" data-n="alimentoTipo" value="${d.alimentoTipo||''}" placeholder="Marca / Lote">
+    </div>
+    <div class="field" style="margin-top:24px"><label>Recolección de huevos</label>
+      <div class="input-row two">
+        <div class="num-input"><div class="cap">Total</div><input type="number" inputmode="numeric" data-n="huevos" value="${d.huevos??''}"></div>
+        <div class="num-input"><div class="cap">Recolecciones</div><input type="number" inputmode="numeric" data-n="recolecciones" value="${d.recolecciones??''}"></div>
+      </div>
+    </div>
+    <div class="field"><label>Cáscara</label>${chipsHTML('cascara',[
+      {v:'dura',t:'Dura'},{v:'normal',t:'Normal'},{v:'fragil',t:'Frágil'}
+    ], d.cascara)}</div>
+    <div class="field"><label>Limpieza</label>${chipsHTML('limpieza',[
+      {v:'limpios',t:'Limpios'},{v:'pocosucios',t:'Poco sucios'},{v:'sucios',t:'Sucios'}
+    ], d.limpieza)}</div>
+    <div class="field"><label>Yema</label>${chipsHTML('yema',[
+      {v:'normal',t:'Normal'},{v:'palida',t:'Pálida'},{v:'oscura',t:'Oscura'}
+    ], d.yema)}</div>
+    <div class="field"><label>Anomalías</label>
+      ${checksHTML('anomalias',[
+        {v:'rotos',t:'Rotos'},{v:'deformes',t:'Deformes'},{v:'dobleyema',t:'Doble yema'},
+        {v:'sincascara',t:'Sin cáscara'},{v:'manchas',t:'Manchas'}
+      ], d.anomalias)}
+    </div>
+    <div class="field"><label>Cantidad no aptos</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="numeric" data-n="noAptos" value="${d.noAptos??''}" placeholder="0"></div></div>
+    </div>
+    <div class="calc"><span>Huevos vendibles</span><b>${vendibles}</b></div>
+    <div class="collapse-head" data-col="semanal"><span>⚖️ Peso semanal</span><span class="arrow">▸</span></div>
+    <div class="collapse-body" data-body="semanal">
+      <div class="field"><label>Peso promedio de aves (g)</label>
+        <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="pesoAves" value="${d.pesoAves??''}"></div></div>
+      </div>
+      <div class="field"><label>Peso promedio del huevo (g)</label>
+        <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="pesoHuevo" value="${d.pesoHuevo??''}"></div></div>
+      </div>
+      <div class="field"><label>Uniformidad del lote</label>${chipsHTML('uniformidad',[
+        {v:'muy',t:'Muy uniforme'},{v:'aceptable',t:'Aceptable'},{v:'desigual',t:'Desigual'}
+      ], d.uniformidad)}</div>
+    </div>
+    <div class="collapse-head" data-col="almacen"><span>📦 Almacenamiento</span><span class="arrow">▸</span></div>
+    <div class="collapse-body" data-body="almacen">
+      <div class="input-row">
+        <div class="num-input"><div class="cap">Temp °C</div><input type="number" inputmode="decimal" data-n="almTemp" value="${d.almTemp??''}"></div>
+        <div class="num-input"><div class="cap">Hum %</div><input type="number" inputmode="decimal" data-n="almHum" value="${d.almHum??''}"></div>
+        <div class="num-input"><div class="cap">Horas</div><input type="number" inputmode="decimal" data-n="almHoras" value="${d.almHoras??''}"></div>
+      </div>
+    </div>
+    <button class="save-btn" id="saveSec" style="margin-top:16px">Guardar sección</button>
+  `;
+}
+
+function formSanidad(d, l){
+  const acum = d.muertasAcum || 0;
+  const pct = l.avesIniciales ? ((acum/l.avesIniciales)*100).toFixed(2) : 0;
+  const superaUmbral = d.muertas && (d.muertas/l.avesActuales*100) > state.ajustes.umbralMort;
+  return `
+    <div class="calc"><span>Mortalidad acumulada</span><b>${acum} (${pct}%)</b></div>
+    <div class="field"><label>Bajas de hoy</label>
+      <div class="input-row">
+        <div class="num-input"><div class="cap">Muertas</div><input type="number" inputmode="numeric" data-n="muertas" value="${d.muertas??''}"></div>
+        <div class="num-input"><div class="cap">Enfermas</div><input type="number" inputmode="numeric" data-n="enfermas" value="${d.enfermas??''}"></div>
+        <div class="num-input"><div class="cap">Descartadas</div><input type="number" inputmode="numeric" data-n="descartadas" value="${d.descartadas??''}"></div>
+      </div>
+    </div>
+    ${superaUmbral ? `
+      <div class="reminder crit" style="margin-bottom:16px">
+        <span class="ic">⚠️</span>
+        <div class="txt"><b>Mortalidad por encima del umbral</b><span>Registra causa y signos clínicos</span></div>
+      </div>
+    ` : ''}
+    <div class="field"><label>Causa probable</label>${chipsHTML('causa',[
+      {v:'respiratorio',t:'Respiratorio'},{v:'digestivo',t:'Digestivo'},{v:'nervioso',t:'Nervioso'},
+      {v:'accidente',t:'Accidente'},{v:'desconocido',t:'Desconocido'}
+    ], d.causa)}</div>
+    <div class="field"><label>Signos clínicos</label>
+      ${checksHTML('signos',[
+        {v:'jadeo',t:'Jadeo'},{v:'tos',t:'Tos'},{v:'estornudos',t:'Estornudos'},
+        {v:'diarrea',t:'Diarrea'},{v:'decaimiento',t:'Decaimiento'},
+        {v:'plumas',t:'Plumas erizadas'},{v:'cojera',t:'Cojera'}
+      ], d.signos)}
+    </div>
+    <div class="field"><label>Notas</label>
+      <input type="text" class="text-input" data-n="notas" value="${d.notas||''}" placeholder="Observaciones...">
+    </div>
+    <button class="save-btn ghost" id="addEventoSan" style="margin-top:8px">💉 + Registrar tratamiento / vacuna</button>
+    <button class="save-btn" id="saveSec">Guardar sección</button>
+  `;
+}
+
+function formBienestar(d){
+  return `
+    <div class="field"><label>Estado de plumas</label>${chipsHTML('plumas',[
+      {v:'bueno',t:'Bueno'},{v:'regular',t:'Regular'},{v:'malo',t:'Malo'}
+    ], d.plumas)}</div>
+    <div class="field"><label>Lesiones</label>${chipsHTML('lesiones',[
+      {v:'ninguna',t:'Ninguna'},{v:'leves',t:'Leves'},{v:'graves',t:'Graves'}
+    ], d.lesiones)}</div>
+    <div class="field"><label>Pododermatitis visual</label>${chipsHTML('podo',[
+      {v:'no',t:'No'},{v:'leve',t:'Leve'},{v:'moderada',t:'Moderada'},{v:'grave',t:'Grave'}
+    ], d.podo)}</div>
+    <div class="field"><label>Comportamiento</label>
+      ${checksHTML('comportamiento',[{v:'picoteo',t:'Picoteo'},{v:'amontonamiento',t:'Amontonamiento'}], d.comportamiento)}
+    </div>
+    <div class="field"><label>Enriquecimiento ambiental</label>
+      ${checksHTML('enriquecimiento',[{v:'perchas',t:'Perchas'},{v:'objetos',t:'Objetos'}], d.enriquecimiento)}
+    </div>
+    <div class="field"><label>Presencia de aves silvestres</label>${chipsHTML('avesSilvestres',[
+      {v:'si',t:'Sí'},{v:'no',t:'No'}
+    ], d.avesSilvestres)}</div>
+    <button class="save-btn" id="saveSec">Guardar sección</button>
+  `;
+}
+
+/* ============================================================
+   BIND FORMULARIOS
+   ============================================================ */
+function bindForm(k){
+  const body = document.getElementById('screenBody');
+  body.querySelectorAll('.chips').forEach(group=>{
+    group.querySelectorAll('.chip').forEach(c=>{
+      c.onclick = ()=>{
+        group.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+        c.classList.add('on');
+      };
+    });
+  });
+  body.querySelectorAll('.check').forEach(c=>{
+    c.onclick = ()=>{
+      c.classList.toggle('on');
+      c.querySelector('.box').textContent = c.classList.contains('on')?'✓':'';
+    };
+  });
+  body.querySelectorAll('.collapse-head').forEach(h=>{
+    h.onclick = ()=>{
+      const b = body.querySelector(`[data-body="${h.dataset.col}"]`);
+      b.classList.toggle('open');
+      h.classList.toggle('open');
+    };
+  });
+  const saveBtn = document.getElementById('saveSec');
+  if(saveBtn) saveBtn.onclick = ()=> guardarSeccion(k);
+  const evSan = document.getElementById('addEventoSan');
+  if(evSan) evSan.onclick = ()=>{
+    document.getElementById('screen').classList.remove('open');
+    setTimeout(()=>abrirEvento('sanidad'), 150);
+  };
+}
+
+function leerFormulario(){
+  const body = document.getElementById('screenBody');
+  const data = {};
+  body.querySelectorAll('[data-n]').forEach(inp=>{
+    const v = inp.value.trim();
+    if(v==='') return;
+    const n = parseFloat(v);
+    data[inp.dataset.n] = isNaN(n) ? v : n;
+  });
+  body.querySelectorAll('.chips').forEach(group=>{
+    const on = group.querySelector('.chip.on');
+    if(on) data[group.dataset.name] = on.dataset.v;
+  });
+  body.querySelectorAll('.checks').forEach(group=>{
+    const vals = [...group.querySelectorAll('.check.on')].map(x=>x.dataset.v);
+    if(vals.length) data[group.dataset.name] = vals;
+  });
+  return data;
+}
+
+function guardarSeccion(k){
+  const data = leerFormulario();
+  const prev = getReg()[k] || {};
+  if(k==='sanidad'){
+    const l = lote();
+    const dif = (data.muertas||0) + (data.descartadas||0);
+    if(!prev._aplicado && dif>0){
+      l.avesActuales = Math.max(0, l.avesActuales - dif);
+      data.muertasAcum = (prev.muertasAcum || 0) + (data.muertas||0);
+      data._aplicado = true;
+    } else {
+      data.muertasAcum = prev.muertasAcum || 0;
+      data._aplicado = prev._aplicado || false;
+    }
+  }
+  setReg(k, {...prev, ...data});
+  document.getElementById('screen').classList.remove('open');
+  render();
+  toast('Guardado ✓');
+}
+
+function copiarAyer(k){
+  const ayer = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const prev = state.registros[regKey(ayer)]?.[k];
+  if(!prev){ toast('No hay datos de ayer'); return; }
+  const body = document.getElementById('screenBody');
+  body.querySelectorAll('[data-n]').forEach(inp=>{
+    if(prev[inp.dataset.n]!=null) inp.value = prev[inp.dataset.n];
+  });
+  body.querySelectorAll('.chips').forEach(group=>{
+    const name = group.dataset.name;
+    if(prev[name]){
+      group.querySelectorAll('.chip').forEach(c=>{
+        c.classList.toggle('on', c.dataset.v===prev[name]);
+      });
+    }
+  });
+  body.querySelectorAll('.checks').forEach(group=>{
+    const name = group.dataset.name;
+    if(prev[name]){
+      group.querySelectorAll('.check').forEach(c=>{
+        const on = prev[name].includes(c.dataset.v);
+        c.classList.toggle('on', on);
+        c.querySelector('.box').textContent = on?'✓':'';
+      });
+    }
+  });
+  toast('Datos de ayer copiados');
+}
+
+/* ============================================================
+   EVENTOS
+   ============================================================ */
+function abrirEvento(tipo){
+  const screen = document.getElementById('screen');
+  const title  = document.getElementById('screenTitle');
+  const body   = document.getElementById('screenBody');
+  const action = document.getElementById('screenAction');
+  action.style.display = 'none';
+  const forms = {
+    sanidad: { t:'💉 Sanidad',        b: eventoSanidad() },
+    bioseg:  { t:'🧹 Bioseguridad',   b: eventoBioseg()  },
+    equipos: { t:'⚙️ Equipos',        b: eventoEquipos() },
+    admin:   { t:'📦 Administrativo', b: eventoAdmin()   }
+  };
+  title.textContent = forms[tipo].t;
+  body.innerHTML = forms[tipo].b;
+  bindForm('evento');
+  const saveBtn = document.getElementById('saveSec');
+  if(saveBtn) saveBtn.onclick = ()=>{
+    const data = leerFormulario();
+    state.eventos.push({
+      tipo, loteId: state.loteActual,
+      fecha: new Date().toISOString(),
+      ...data
+    });
+    save();
+    screen.classList.remove('open');
+    render();
+    toast('Evento registrado ✓');
+  };
+  screen.classList.add('open');
+}
+
+function eventoSanidad(){
+  return `
+    <div class="field"><label>Tipo de evento</label>${chipsHTML('subtipo',[
+      {v:'tratamiento',t:'Tratamiento'},{v:'vacuna',t:'Vacunación'},{v:'vitamina',t:'Vitamina'},{v:'necropsia',t:'Necropsia'}
+    ])}</div>
+    <div class="field"><label>Producto / vacuna</label><input type="text" class="text-input" data-n="producto" placeholder="Nombre"></div>
+    <div class="field"><label>Lote del producto</label><input type="text" class="text-input" data-n="loteProd" placeholder="Lote"></div>
+    <div class="field"><label>Dosis</label><input type="text" class="text-input" data-n="dosis" placeholder="Ej: 0.5 ml"></div>
+    <div class="field"><label>Vía</label>${chipsHTML('via',[
+      {v:'oral',t:'Oral'},{v:'inyectable',t:'Inyectable'},{v:'agua',t:'Agua'},{v:'aerea',t:'Aérea'}
+    ])}</div>
+    <div class="field"><label>Días de retiro (huevos)</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="numeric" data-n="retiro" placeholder="0"></div></div>
+    </div>
+    <div class="field"><label>Motivo</label><input type="text" class="text-input" data-n="motivo" placeholder="Motivo"></div>
+    <button class="save-btn" id="saveSec">Guardar evento</button>
+  `;
+}
+function eventoBioseg(){
+  return `
+    <div class="field"><label>Tipo</label>${chipsHTML('subtipo',[
+      {v:'limpieza',t:'Limpieza'},{v:'vacio',t:'Vacío sanitario'},{v:'cadaveres',t:'Cadáveres'},{v:'gallinaza',t:'Gallinaza'}
+    ])}</div>
+    <div class="field"><label>Producto / método</label><input type="text" class="text-input" data-n="producto"></div>
+    <div class="field"><label>Áreas tratadas</label><input type="text" class="text-input" data-n="areas"></div>
+    <div class="field"><label>Cantidad (kg / aves)</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="cantidad"></div></div>
+    </div>
+    <div class="field"><label>Responsable</label><input type="text" class="text-input" data-n="responsable"></div>
+    <button class="save-btn" id="saveSec">Guardar evento</button>
+  `;
+}
+function eventoEquipos(){
+  return `
+    <div class="field"><label>Tipo</label>${chipsHTML('subtipo',[
+      {v:'preventivo',t:'Preventivo'},{v:'correctivo',t:'Correctivo'}
+    ])}</div>
+    <div class="field"><label>Equipo</label><input type="text" class="text-input" data-n="equipo"></div>
+    <div class="field"><label>Actividad realizada</label><input type="text" class="text-input" data-n="actividad"></div>
+    <div class="field"><label>Responsable</label><input type="text" class="text-input" data-n="responsable"></div>
+    <button class="save-btn" id="saveSec">Guardar evento</button>
+  `;
+}
+function eventoAdmin(){
+  return `
+    <div class="field"><label>Tipo</label>${chipsHTML('subtipo',[
+      {v:'compra',t:'Compra'},{v:'venta',t:'Venta'},{v:'entrada',t:'Entrada aves'},{v:'salida',t:'Salida aves'}
+    ])}</div>
+    <div class="field"><label>Producto / concepto</label><input type="text" class="text-input" data-n="producto"></div>
+    <div class="field"><label>Cantidad</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="cantidad"></div></div>
+    </div>
+    <div class="field"><label>Precio unitario</label>
+      <div class="input-row one"><div class="num-input"><input type="number" inputmode="decimal" data-n="precio"></div></div>
+    </div>
+    <div class="field"><label>Cliente / proveedor</label><input type="text" class="text-input" data-n="tercero"></div>
+    <button class="save-btn" id="saveSec">Guardar evento</button>
+  `;
+}
+
+/* ============================================================
+   ACCIONES DE AJUSTES
+   ============================================================ */
+function accionAjuste(act){
+  if(act==='exportExcel'){ exportarExcel(); }
+  if(act==='exportJSON'){
+    const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bitacora_backup_'+HOY()+'.json'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Copia exportada');
+  }
+  if(act==='importJSON'){
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json,application/json';
+    input.onchange = async ()=>{
+      const file = input.files[0]; if(!file) return;
+      try{
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if(!data.lotes || !data.registros){ toast('Archivo no válido'); return; }
+        state = data;
+        await guardarEnDexie();
+        aplicarTema(); render();
+        toast('Copia importada ✓');
+      }catch(e){ toast('Error al importar'); }
+    };
+    input.click();
+  }
+  if(act==='reset'){
+    if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')){
+      db.delete().then(()=>{
+        localStorage.removeItem('bitacora_avicola_v2');
+        location.reload();
+      });
+    }
+  }
+  if(act==='sync'){
+    if(accessToken) sincronizar();
+    else pedirToken();
+  }
+  if(act==='disconnect'){
+    accessToken = null;
+    driveFileId = null;
+    setSyncStatus(null);
+    render();
+    toast('Desconectado');
+  }
+  if(act==='editUmbral'){
+    const v = prompt('Umbral mortalidad diaria (%):', state.ajustes.umbralMort);
+    if(v==null) return;
+    const n = parseFloat(v);
+    if(isNaN(n) || n<0){ toast('Valor inválido'); return; }
+    state.ajustes.umbralMort = n;
+    save(); render(); toast('Umbral actualizado');
+  }
+  if(act==='editPesoDia'){
+    const v = prompt('Día de peso semanal (0=Dom ... 6=Sáb):', state.ajustes.pesoDia);
+    if(v==null) return;
+    const n = parseInt(v);
+    if(isNaN(n) || n<0 || n>6){ toast('Valor inválido (0-6)'); return; }
+    state.ajustes.pesoDia = n;
+    save(); render(); toast('Día actualizado');
+  }
+}
+
+/* ============================================================
+   INICIALIZACIÓN
+   ============================================================ */
+(async function init(){
+  try{
+    await inicializarDB();
+    state = await cargarDesdeDexie();
+  }catch(e){
+    console.error('Error inicial:', e);
+    const ls = localStorage.getItem('bitacora_avicola_v2');
+    state = ls ? JSON.parse(ls) : {
+      lotes: DEFAULT_LOTES, loteActual: 'g3', registros: {}, eventos: [],
+      ajustes: { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1 },
+      _lastSaved: 0
+    };
+  }
+  aplicarTema();
+  render();
+  setTimeout(initGoogle, 500);
+})();
+</script>
+</body>
+</html> 
