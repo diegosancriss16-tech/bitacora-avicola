@@ -1770,14 +1770,92 @@ function accionAjuste(act){
 })();
   
 /* ============================================================
-   SERVICE WORKER (PWA)
+   SERVICE WORKER (PWA) con auto-actualización
    ============================================================ */
 if('serviceWorker' in navigator){
+  let refreshing = false;
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW registrado', reg.scope))
-      .catch(err => console.log('SW error', err));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Buscar actualizaciones cada vez que se abre la app
+      reg.update();
+
+      // Detectar cuando hay una versión nueva
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if(!newWorker) return;
+
+        newWorker.addEventListener('statechange', () => {
+          // Hay una versión nueva lista y hay una vieja controlando
+          if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+            mostrarAvisoActualizacion(newWorker);
+          }
+        });
+      });
+    }).catch(err => console.log('SW error', err));
   });
+
+  // Cuando el SW nuevo toma el control, recargar una vez
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(!refreshing){
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
+  // Aviso visual de actualización
+  function mostrarAvisoActualizacion(worker){
+    // Eliminar aviso previo si existe
+    const previo = document.getElementById('updateBanner');
+    if(previo) previo.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.innerHTML = `
+      <div style="
+        position:fixed;top:0;left:50%;transform:translateX(-50%);
+        width:100%;max-width:520px;
+        background:#6B8E23;color:#fff;
+        padding:12px 16px;
+        display:flex;align-items:center;justify-content:space-between;
+        z-index:9999;
+        box-shadow:0 2px 12px rgba(0,0,0,.25);
+        font-family:inherit;font-size:13.5px;font-weight:500;
+        animation:slideDown .3s ease;
+      ">
+        <span>🎉 Hay una actualización disponible</span>
+        <div style="display:flex;gap:8px">
+          <button id="updateNow" style="
+            background:#fff;color:#6B8E23;
+            border:none;border-radius:8px;
+            padding:7px 14px;font-size:12.5px;font-weight:700;
+            cursor:pointer;
+          ">Actualizar</button>
+          <button id="updateLater" style="
+            background:transparent;color:#fff;
+            border:1px solid rgba(255,255,255,.5);border-radius:8px;
+            padding:7px 12px;font-size:12.5px;
+            cursor:pointer;
+          ">Después</button>
+        </div>
+      </div>
+      <style>
+        @keyframes slideDown {
+          from { transform: translateX(-50%) translateY(-100%); }
+          to { transform: translateX(-50%) translateY(0); }
+        }
+      </style>
+    `;
+    document.body.appendChild(banner);
+
+    document.getElementById('updateNow').onclick = () => {
+      worker.postMessage({type: 'SKIP_WAITING'});
+      banner.remove();
+    };
+    document.getElementById('updateLater').onclick = () => {
+      banner.remove();
+    };
+  }
 }
 </script>
 </body>
