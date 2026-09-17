@@ -2009,10 +2009,11 @@ function accionAjuste(act){
     input.click();
   }
   if(act==='tutorial'){ iniciarTutorial(true); }
-  if(act==='reset'){
+   if(act==='reset'){
     if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')){
       db.delete().then(()=>{
         localStorage.removeItem('bitacora_avicola_v2');
+        localStorage.removeItem('tutorialVisto');
         location.reload();
       });
     }
@@ -2184,7 +2185,9 @@ const TUTORIAL_PASOS = [
 let tutPaso = 0;
 
 function iniciarTutorial(forzar){
-  if(!forzar && state.tutorialVisto) return;
+  // Verificación doble: state + localStorage (por si Drive sobrescribe)
+  const lsVisto = localStorage.getItem('tutorialVisto') === '1';
+  if(!forzar && (state.tutorialVisto || lsVisto)) return;
   tutPaso = 0;
   document.getElementById('tutBg').classList.add('open');
   actualizarTutorial();
@@ -2220,6 +2223,8 @@ document.getElementById('tutNext').onclick = ()=>{
 function cerrarTutorial(){
   document.getElementById('tutBg').classList.remove('open');
   state.tutorialVisto = true;
+  // Doble respaldo: localStorage (síncrono) + state (Dexie/Drive)
+  localStorage.setItem('tutorialVisto', '1');
   save();
 }
 
@@ -2240,10 +2245,14 @@ function cerrarTutorial(){
       _lastSaved: 0
     };
   }
+   // Sincronizar tutorialVisto desde localStorage si Dexie lo perdió
+  if(localStorage.getItem('tutorialVisto') === '1'){
+    state.tutorialVisto = true;
+  }
   aplicarTema();
   render();
   setTimeout(initGoogle, 500);
-  setTimeout(()=> iniciarTutorial(), 900);
+  setTimeout(()=> iniciarTutorial(), 1200);
   setTimeout(programarNotificacion, 2000);
 })();
 
