@@ -15,6 +15,44 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
+  /* ============================================================
+   MODAL DE INPUT
+   ============================================================ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:22px 20px;max-width:400px;width:100%;animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:6px;text-align:center}
+.modal p{font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px}
+.modal input{width:100%;padding:14px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:24px;font-weight:700;text-align:center;outline:none;font-variant-numeric:tabular-nums;transition:.15s}
+.modal input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(107,142,35,.15)}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.modal-btns button{padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
+.modal-btns .cancel{background:var(--card2);color:var(--text)}
+.modal-btns .confirm{background:var(--primary);color:#fff}
+[data-theme="dark"] .modal-btns .confirm{color:#141414}
+.modal-btns button:active{transform:scale(.97)}
+
+/* ============================================================
+   TUTORIAL
+   ============================================================ */
+.tut-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.tut-bg.open{display:flex}
+.tut{background:var(--card);border-radius:20px;padding:30px 22px 22px;max-width:380px;width:100%;text-align:center;animation:pop .3s ease;position:relative}
+.tut .skip{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;font-weight:500;padding:6px 10px;border-radius:8px}
+.tut .skip:active{background:var(--card2)}
+.tut .emoji{font-size:60px;margin-bottom:16px;display:block;line-height:1}
+.tut h3{font-size:19px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.tut p{font-size:14px;color:var(--text2);line-height:1.55;margin-bottom:24px;min-height:66px}
+.tut .dots{display:flex;justify-content:center;gap:6px;margin-bottom:20px}
+.tut .dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:.2s}
+.tut .dot.on{background:var(--primary);width:24px;border-radius:4px}
+.tut-btns{display:flex;gap:10px}
+.tut-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
+.tut-btns .prev{background:var(--card2);color:var(--text)}
+.tut-btns .next{background:var(--primary);color:#fff}
+[data-theme="dark"] .tut-btns .next{color:#141414}
+.tut-btns button:active{transform:scale(.97)}
 :root{
   --primary:#6B8E23; --primary-dark:#4A6318; --primary-light:#8FBF3F;
   --accent:#F5C542;
@@ -225,6 +263,33 @@ input,textarea{user-select:text}
 </div>
 
 <div class="toast" id="toast"></div>
+  <!-- MODAL DE INPUT -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Título</h3>
+    <p id="modalSub">Subtítulo</p>
+    <input type="number" id="modalInput" inputmode="decimal" autocomplete="off">
+    <div class="modal-btns">
+      <button class="cancel" id="modalCancel">Cancelar</button>
+      <button class="confirm" id="modalConfirm">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL -->
+<div class="tut-bg" id="tutBg">
+  <div class="tut">
+    <button class="skip" id="tutSkip">Saltar</button>
+    <span class="emoji" id="tutEmoji">🐔</span>
+    <h3 id="tutTitle">Título</h3>
+    <p id="tutText">Texto</p>
+    <div class="dots" id="tutDots"></div>
+    <div class="tut-btns">
+      <button class="prev" id="tutPrev">Atrás</button>
+      <button class="next" id="tutNext">Siguiente</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -883,6 +948,10 @@ function viewAjustes(){
         <span class="lbl">📥 Importar copia (JSON)</span>
         <span class="val chev"></span>
       </div>
+            <div class="setting-row" data-act="tutorial">
+        <span class="lbl">📖 Ver tutorial de nuevo</span>
+        <span class="val chev"></span>
+      </div>
       <div class="setting-row" data-act="reset">
         <span class="lbl" style="color:var(--danger)">Borrar todos los datos</span>
         <span class="val chev"></span>
@@ -959,35 +1028,57 @@ function bindMain(){
 /* ============================================================
    ACCIONES RÁPIDAS
    ============================================================ */
-function quickAction(q){
+  async function quickAction(q){
   const config = {
     muertas:  { label:'¿Cuántas aves muertas hoy?', campo:'muertas', sec:'sanidad' },
     huevos:   { label:'¿Cuántos huevos recolectados?', campo:'huevos', sec:'produccion' },
     alimento: { label:'¿Cuántos kg de alimento?', campo:'alimentoKg', sec:'produccion' },
-    agua:     { label:'Consumo de agua (normal/bajo/alto)', campo:'aguaConsumo', sec:'ambiente' }
+    agua:     { label:'Consumo de agua', campo:'aguaConsumo', sec:'ambiente', tipo:'text' }
   };
   const c = config[q];
   if(!c) return;
-  const val = prompt(c.label);
+
+  // Caso especial: agua (input de texto)
+  if(q==='agua'){
+    const val = await mostrarInput({
+      titulo: '💧 Consumo de agua',
+      sub: 'Escribe: normal, bajo o alto',
+      tipo: 'text',
+      valor: 'normal'
+    });
+    if(val==null || val.trim()==='') return;
+    const v = val.toLowerCase();
+    if(!['normal','bajo','alto'].includes(v)){ toast('Escribe normal, bajo o alto'); return; }
+    const r = getReg();
+    const prev = r.ambiente || {};
+    setReg('ambiente', {...prev, aguaConsumo: v});
+    render();
+    toast('Registrado ✓');
+    return;
+  }
+
+  // Casos numéricos
+  const emoji = { muertas:'💀', huevos:'🥚', alimento:'🌾' }[q] || '';
+  const val = await mostrarInput({
+    titulo: emoji + ' ' + c.label,
+    sub: '',
+    tipo: 'number',
+    valor: ''
+  });
   if(val==null || val.trim()==='') return;
+  const n = parseFloat(val);
+  if(isNaN(n) || n<0){ toast('Número inválido'); return; }
+
   const r = getReg();
   const prev = r[c.sec] || {};
 
-  if(q==='agua'){
-    const v = val.toLowerCase();
-    if(!['normal','bajo','alto'].includes(v)){ toast('Valor no válido'); return; }
-    setReg('ambiente', {...prev, aguaConsumo: v});
+  if(q==='muertas'){
+    const l = lote();
+    l.avesActuales = Math.max(0, l.avesActuales - n);
+    const acum = (prev.muertasAcum || 0) + n;
+    setReg('sanidad', {...prev, muertas:(prev.muertas||0)+n, muertasAcum: acum});
   } else {
-    const n = parseFloat(val);
-    if(isNaN(n) || n<0){ toast('Número inválido'); return; }
-    if(q==='muertas'){
-      const l = lote();
-      l.avesActuales = Math.max(0, l.avesActuales - n);
-      const acum = (prev.muertasAcum || 0) + n;
-      setReg('sanidad', {...prev, muertas:(prev.muertas||0)+n, muertasAcum: acum});
-    } else {
-      setReg(c.sec, {...prev, [c.campo]: (prev[c.campo]||0) + n});
-    }
+    setReg(c.sec, {...prev, [c.campo]: (prev[c.campo]||0) + n});
   }
   render();
   toast('Registrado ✓');
@@ -1694,6 +1785,7 @@ function accionAjuste(act){
     URL.revokeObjectURL(url);
     toast('Copia exportada');
   }
+    if(act==='tutorial'){ iniciarTutorial(true); }
   if(act==='importJSON'){
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.json,application/json';
@@ -1747,7 +1839,126 @@ function accionAjuste(act){
     save(); render(); toast('Día actualizado');
   }
 }
+/* ============================================================
+   MODAL DE INPUT (reemplaza prompt nativo)
+   ============================================================ */
+function mostrarInput({ titulo, sub, tipo='number', valor='' }){
+  return new Promise(resolve => {
+    const bg = document.getElementById('modalBg');
+    const title = document.getElementById('modalTitle');
+    const subt = document.getElementById('modalSub');
+    const input = document.getElementById('modalInput');
+    const cancel = document.getElementById('modalCancel');
+    const confirm = document.getElementById('modalConfirm');
 
+    title.textContent = titulo;
+    subt.textContent = sub || '';
+    subt.style.display = sub ? 'block' : 'none';
+    input.type = tipo;
+    input.value = valor;
+    input.inputMode = tipo === 'number' ? 'decimal' : 'text';
+    input.style.fontSize = tipo === 'number' ? '24px' : '18px';
+
+    bg.classList.add('open');
+    setTimeout(()=>{ input.focus(); input.select(); }, 150);
+
+    function cerrar(v){
+      bg.classList.remove('open');
+      cancel.onclick = null;
+      confirm.onclick = null;
+      input.onkeydown = null;
+      resolve(v);
+    }
+
+    cancel.onclick = ()=> cerrar(null);
+    confirm.onclick = ()=> cerrar(input.value.trim());
+    input.onkeydown = (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); cerrar(input.value.trim()); }
+      if(e.key === 'Escape'){ cerrar(null); }
+    };
+  });
+}
+
+/* ============================================================
+   TUTORIAL INTERACTIVO
+   ============================================================ */
+const TUTORIAL_PASOS = [
+  {
+    emoji: '🐔',
+    titulo: '¡Bienvenido!',
+    texto: 'Esta es tu bitácora digital para la granja avícola. Aquí registrarás todo lo del día a día, de forma rápida y sin papeles.'
+  },
+  {
+    emoji: '🏠',
+    titulo: 'Tus galpones',
+    texto: 'En la pestaña Lotes puedes crear, editar y eliminar galpones. Toca uno para seleccionarlo como el actual.'
+  },
+  {
+    emoji: '📝',
+    titulo: 'Registro diario',
+    texto: 'En la pantalla Hoy verás 4 tarjetas: Ambiente, Producción, Sanidad y Bienestar. Toca cada una para registrar los datos del día.'
+  },
+  {
+    emoji: '⚡',
+    titulo: 'Acciones rápidas',
+    texto: 'Usa estos botones para registrar mortalidad, huevos, alimento o agua en segundos, sin abrir toda la sección.'
+  },
+  {
+    emoji: '➕',
+    titulo: 'Eventos especiales',
+    texto: 'El botón + del centro abre un menú para registrar vacunas, tratamientos, limpiezas, compras, ventas y más.'
+  },
+  {
+    emoji: '☁️',
+    titulo: 'Sincronización',
+    texto: 'En Ajustes puedes conectar con Google Drive. Así tus datos se respaldan y se comparten entre dispositivos automáticamente.'
+  }
+];
+
+let tutPaso = 0;
+
+function iniciarTutorial(forzar){
+  if(!forzar && state.tutorialVisto) return;
+  tutPaso = 0;
+  document.getElementById('tutBg').classList.add('open');
+  actualizarTutorial();
+}
+
+function actualizarTutorial(){
+  const p = TUTORIAL_PASOS[tutPaso];
+  document.getElementById('tutEmoji').textContent = p.emoji;
+  document.getElementById('tutTitle').textContent = p.titulo;
+  document.getElementById('tutText').textContent = p.texto;
+
+  document.getElementById('tutDots').innerHTML = TUTORIAL_PASOS.map((_, i) =>
+    `<div class="dot ${i === tutPaso ? 'on' : ''}"></div>`
+  ).join('');
+
+  const prev = document.getElementById('tutPrev');
+  const next = document.getElementById('tutNext');
+
+  prev.style.display = tutPaso === 0 ? 'none' : 'block';
+  next.textContent = tutPaso === TUTORIAL_PASOS.length - 1 ? '¡Empezar!' : 'Siguiente';
+}
+
+document.getElementById('tutSkip').onclick = cerrarTutorial;
+document.getElementById('tutPrev').onclick = ()=>{
+  if(tutPaso > 0){ tutPaso--; actualizarTutorial(); }
+};
+document.getElementById('tutNext').onclick = ()=>{
+  if(tutPaso < TUTORIAL_PASOS.length - 1){
+    tutPaso++;
+    actualizarTutorial();
+  } else {
+    cerrarTutorial();
+  }
+};
+
+function cerrarTutorial(){
+  document.getElementById('tutBg').classList.remove('open');
+  state.tutorialVisto = true;
+  save();
+}
 /* ============================================================
    INICIALIZACIÓN
    ============================================================ */
@@ -1764,9 +1975,10 @@ function accionAjuste(act){
       _lastSaved: 0
     };
   }
-  aplicarTema();
+   aplicarTema();
   render();
   setTimeout(initGoogle, 500);
+  setTimeout(()=> iniciarTutorial(), 900);
 })();
   
 /* ============================================================
