@@ -433,14 +433,15 @@ let syncTimeout = null;
 
 let googleInitIntentos = 0;
 
+let googleInitIntentos = 0;
+let autoReconectando = false;
+
 function initGoogle(){
-  // Verificar si el Client ID está configurado
   if(GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')){
     document.getElementById('syncDot').title = 'Configura tu GOOGLE_CLIENT_ID';
     return;
   }
 
-  // Si Google aún no cargó, reintentar hasta 20 veces (10 segundos)
   if(!window.google || !window.google.accounts || !window.google.accounts.oauth2){
     googleInitIntentos++;
     if(googleInitIntentos < 20){
@@ -448,10 +449,54 @@ function initGoogle(){
     } else {
       console.error('Google no cargó después de 10 segundos');
       document.getElementById('syncDot').title = 'Error al cargar Google';
-      toast('Error: no se pudo cargar Google. Verifica tu conexión.');
     }
     return;
   }
+
+  try {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
+      callback: async (resp)=>{
+        if(resp.error){
+          setSyncStatus('err');
+          autoReconectando = false;
+          return;
+        }
+        accessToken = resp.access_token;
+        localStorage.setItem('driveAutorizado', '1');
+        setSyncStatus('on');
+        autoReconectando = false;
+        await sincronizar();
+      }
+    });
+    googleInitIntentos = 0;
+    console.log('Google OAuth listo');
+
+    // 🔄 Reconexión silenciosa si ya autorizó antes
+    if(localStorage.getItem('driveAutorizado') === '1'){
+      setTimeout(intentarReconexionSilenciosa, 800);
+    }
+  } catch(e){
+    console.error('Error al inicializar Google:', e);
+    document.getElementById('syncDot').title = 'Error al inicializar Google';
+  }
+}
+
+function intentarReconexionSilenciosa(){
+  if(!tokenClient || accessToken || autoReconectando) return;
+  autoReconectando = true;
+  setSyncStatus('syncing');
+  // prompt: '' hace que Google no muestre ventana si ya autorizó antes
+  tokenClient.requestAccessToken({ prompt: '' });
+  // Si en 3 segundos no respondió, quitar el estado "syncing"
+  setTimeout(()=>{
+    if(!accessToken){
+      autoReconectando = false;
+      setSyncStatus(null);
+    }
+  }, 3000);
+}
 
   // Google ya está listo: crear el tokenClient
   try {
@@ -475,7 +520,8 @@ function initGoogle(){
 function pedirToken(){
   if(!tokenClient){ toast('Configura GOOGLE_CLIENT_ID primero'); return; }
   setSyncStatus('syncing');
-  tokenClient.requestAccessToken();
+  // prompt: 'consent' fuerza la ventana si es la primera vez
+  tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
 }
 
 function setSyncStatus(s){
@@ -495,7 +541,13 @@ async function driveFindFile(){
     `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name,modifiedTime)`,
     { headers:{ Authorization:'Bearer '+accessToken } }
   );
-  if(res.status===401){ accessToken=null; setSyncStatus('err'); throw new Error('Token expirado'); }
+  if(res.status===401){
+    accessToken=null;
+    setSyncStatus('err');
+    // Intentar reconectar automáticamente
+    setTimeout(intentarReconexionSilenciosa, 500);
+    throw new Error('Token expirado');
+  }
   const data = await res.json();
   return (data.files && data.files[0]) ? data.files[0] : null;
 }
@@ -2042,11 +2094,12 @@ function accionAjuste(act){
     input.click();
   }
   if(act==='tutorial'){ iniciarTutorial(true); }
-   if(act==='reset'){
+     if(act==='reset'){
     if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')){
       db.delete().then(()=>{
         localStorage.removeItem('bitacora_avicola_v2');
         localStorage.removeItem('tutorialVisto');
+        localStorage.removeItem('driveAutorizado');
         location.reload();
       });
     }
@@ -2055,9 +2108,10 @@ function accionAjuste(act){
     if(accessToken) sincronizar();
     else pedirToken();
   }
-  if(act==='disconnect'){
+   if(act==='disconnect'){
     accessToken = null;
     driveFileId = null;
+    localStorage.removeItem('driveAutorizado');
     setSyncStatus(null);
     render();
     toast('Desconectado');
