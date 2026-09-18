@@ -457,7 +457,7 @@ function initGoogle(){
   try {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.appdata',
+      scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
       callback: async (resp)=>{
         if(resp.error){ setSyncStatus('err'); return; }
         accessToken = resp.access_token;
@@ -578,6 +578,9 @@ function exportarExcel(){
     const wb = XLSX.utils.book_new();
     const regs = [];
     Object.entries(state.registros).forEach(([k,v])=>{
+  // Filtrar registros completamente vacíos
+  const tieneDatos = v.ambiente || v.produccion || v.sanidad || v.bienestar;
+  if(!tieneDatos) return;
       const idx = k.lastIndexOf('_');
       const loteId = k.slice(0, idx);
       const fecha = k.slice(idx+1);
@@ -1109,14 +1112,20 @@ function viewAjustes(){
         <span class="lbl">📊 Exportar a Excel (.xlsx)</span>
         <span class="val chev"></span>
       </div>
-      <div class="setting-row" data-act="exportPDF">
-        <span class="lbl">📄 Reporte PDF del mes</span>
+            <div class="setting-row" data-act="exportExcelDrive">
+        <span class="lbl">☁️ Respaldar Excel a Drive</span>
         <span class="val chev"></span>
       </div>
       <div class="setting-row" data-act="exportJSON">
         <span class="lbl">💾 Exportar copia (JSON)</span>
         <span class="val chev"></span>
       </div>
+            ${state.ajustes.ultimoBackupDrive ? `
+        <div class="setting-row">
+          <span class="lbl" style="font-size:12px;color:var(--text3)">Último backup a Drive</span>
+          <span class="val" style="font-size:11px">${new Date(state.ajustes.ultimoBackupDrive).toLocaleString('es-MX')}</span>
+        </div>
+      `:''}
       <div class="setting-row" data-act="importJSON">
         <span class="lbl">📥 Importar copia (JSON)</span>
         <span class="val chev"></span>
@@ -2005,7 +2014,7 @@ function eventoAdmin(){
    ACCIONES DE AJUSTES
    ============================================================ */
 function accionAjuste(act){
-  if(act==='exportExcel'){ exportarExcel(); }
+   if(act==='exportExcelDrive'){ exportarExcelADrive(); }
   if(act==='exportPDF'){ exportarPDF(); }
   if(act==='exportJSON'){
     const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -2279,7 +2288,190 @@ function cerrarTutorial(){
   setTimeout(()=> iniciarTutorial(), 1200);
   setTimeout(programarNotificacion, 2000);
 })();
+/* ============================================================
+   RESPALDO DE EXCEL A GOOGLE DRIVE
+   ============================================================ */
+let backupFolderId = null;
 
+async function buscarOCrearCarpetaBackups(){
+  // Buscar carpeta existente
+  const q = encodeURIComponent("name='Bitacora Avicola Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
+    { headers:{ Authorization:'Bearer '+accessToken } }
+  );
+  const data = await res.json();
+  if(data.files && data.files.length > 0){
+    return data.files[0].id;
+  }
+  // Crear la carpeta
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers:{
+      Authorization:'Bearer '+accessToken,
+      'Content-Type':'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Bitacora Avicola Backups',
+      mimeType: 'application/vnd.google-apps.folder'
+    })
+  });
+  const nueva = await createRes.json();
+  return nueva.id;
+}
+
+function generarExcelBlob(){
+  const wb = XLSX.utils.book_new();
+
+  // Hoja: Registros
+  const regs = [];
+  Object.entries(state.registros).forEach(([k,v])=>{
+    const tieneDatos = v.ambiente || v.produccion || v.sanidad || v.bienestar;
+    if(!tieneDatos) return;
+    const idx = k.lastIndexOf('_');
+    const loteId = k.slice(0, idx);
+    const fecha = k.slice(idx+1);
+    const lote = state.lotes.find(l=>l.id===loteId) || {nombre:loteId};
+    const row = { Fecha: fecha, Lote: lote.nombre };
+    if(v.ambiente){
+      Object.assign(row, {
+        'T° Mín': v.ambiente.tempMin, 'T° Máx': v.ambiente.tempMax, 'T° Prom': v.ambiente.tempProm,
+        'Hum Mín': v.ambiente.humMin, 'Hum Máx': v.ambiente.humMax, 'Hum Prom': v.ambiente.humProm,
+        'Amoniaco': v.ambiente.amoniaco, 'Ventilación': v.ambiente.ventilacion,
+        'Cama': v.ambiente.cama, 'Moscas': v.ambiente.moscas, 'Roedores': v.ambiente.roedores
+      });
+    }
+    if(v.produccion){
+      Object.assign(row, {
+        'Alimento (kg)': v.produccion.alimentoKg,
+        'Huevos': v.produccion.huevos,
+        'No aptos': v.produccion.noAptos,
+        'Peso aves (g)': v.produccion.pesoAves,
+        'Peso huevo (g)': v.produccion.pesoHuevo
+      });
+    }
+    if(v.sanidad){
+      Object.assign(row, {
+        'Muertas': v.sanidad.muertas,
+        'Enfermas': v.sanidad.enfermas,
+        'Descartadas': v.sanidad.descartadas,
+        'Causa': v.sanidad.causa
+      });
+    }
+    if(v.bienestar){
+      Object.assign(row, {
+        'Plumas': v.bienestar.plumas,
+        'Lesiones': v.bienestar.lesiones,
+        'Pododermatitis': v.bienestar.podo
+      });
+    }
+    regs.push(row);
+  });
+  regs.sort((a,b)=> (b.Fecha||'').localeCompare(a.Fecha||''));
+  if(regs.length){
+    const ws1 = XLSX.utils.json_to_sheet(regs);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+  }
+
+  // Hoja: Eventos
+  if(state.eventos.length){
+    const evs = state.eventos.map(e=>{
+      const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
+      return {
+        Fecha: e.fecha ? new Date(e.fecha).toLocaleString('es-MX') : '',
+        Lote: lote.nombre,
+        Tipo: e.tipo, Subtipo: e.subtipo,
+        Producto: e.producto, Dosis: e.dosis,
+        'Días retiro': e.retiro,
+        Responsable: e.responsable, Motivo: e.motivo
+      };
+    });
+    const ws2 = XLSX.utils.json_to_sheet(evs);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
+  }
+
+  // Hoja: Resumen
+  const resumen = state.lotes.map(l=>{
+    const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
+    const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
+    const totalMuertas = regsLote.reduce((s,[,v])=> s + (v.sanidad?.muertas||0), 0);
+    return {
+      Lote: l.nombre,
+      Etapa: l.etapa,
+      Semana: l.semana,
+      'Aves actuales': l.avesActuales,
+      'Días registrados': regsLote.length,
+      'Total huevos': totalHuevos,
+      'Total muertas': totalMuertas,
+      'Mortalidad %': l.avesIniciales ? ((totalMuertas/l.avesIniciales)*100).toFixed(2) : 0
+    };
+  });
+  const ws3 = XLSX.utils.json_to_sheet(resumen);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+
+  // Convertir a base64
+  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'base64' });
+  return wbout;
+}
+
+async function exportarExcelADrive(){
+  if(!accessToken){
+    toast('Primero conecta con Google Drive');
+    return;
+  }
+  setSyncStatus('syncing');
+  try{
+    // 1. Generar el Excel
+    const base64 = generarExcelBlob();
+
+    // 2. Buscar/crear carpeta
+    if(!backupFolderId){
+      backupFolderId = await buscarOCrearCarpetaBackups();
+    }
+
+    // 3. Subir el archivo
+    const nombreArchivo = `bitacora_${HOY()}.xlsx`;
+    const metadata = {
+      name: nombreArchivo,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      parents: [backupFolderId]
+    };
+
+    const boundary = '----bitacora_xlsx_' + Date.now();
+    const body =
+      '--' + boundary + '\r\n' +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) + '\r\n' +
+      '--' + boundary + '\r\n' +
+      'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n' +
+      'Content-Transfer-Encoding: base64\r\n\r\n' +
+      base64 + '\r\n' +
+      '--' + boundary + '--';
+
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers:{
+        Authorization: 'Bearer ' + accessToken,
+        'Content-Type': 'multipart/related; boundary=' + boundary
+      },
+      body: body
+    });
+
+    if(!res.ok){
+      const err = await res.text();
+      throw new Error('Upload falló: ' + res.status + ' - ' + err);
+    }
+
+    setSyncStatus('on');
+    toast('📤 Excel respaldado en Drive ✓');
+    state.ajustes.ultimoBackupDrive = new Date().toISOString();
+    save();
+  }catch(e){
+    console.error('Error backup:', e);
+    setSyncStatus('err');
+    toast('Error al respaldar en Drive');
+  }
+}
 /* ============================================================
    SERVICE WORKER con auto-actualización
    ============================================================ */
