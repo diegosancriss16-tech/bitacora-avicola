@@ -1,5 +1,5 @@
 /* Service Worker - Bitácora Avícola */
-const CACHE = 'bitacora-v5';
+const CACHE = 'bitacora-v6';
 const ASSETS = [
   './',
   './index.html',
