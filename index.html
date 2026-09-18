@@ -195,7 +195,6 @@ input,textarea{user-select:text}
 .empty h3{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty p{font-size:13px}
 
-/* MODAL DE INPUT */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;animation:fade .2s}
 .modal-bg.open{display:flex}
 .modal{background:var(--card);border-radius:16px;padding:22px 20px;max-width:400px;width:100%;animation:pop .25s ease}
@@ -211,7 +210,6 @@ input,textarea{user-select:text}
 [data-theme="dark"] .modal-btns .confirm{color:#141414}
 .modal-btns button:active{transform:scale(.97)}
 
-/* TUTORIAL */
 .tut-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
 .tut-bg.open{display:flex}
 .tut{background:var(--card);border-radius:20px;padding:30px 22px 22px;max-width:380px;width:100%;text-align:center;animation:pop .3s ease;position:relative}
@@ -230,7 +228,6 @@ input,textarea{user-select:text}
 [data-theme="dark"] .tut-btns .next{color:#141414}
 .tut-btns button:active{transform:scale(.97)}
 
-/* TABS */
 .tabs{display:flex;background:var(--card2);border-radius:12px;padding:4px;margin-bottom:16px;gap:4px}
 .tab{flex:1;padding:10px;text-align:center;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:transparent;transition:.15s}
 .tab.on{background:var(--card);color:var(--primary);box-shadow:var(--shadow)}
@@ -238,7 +235,6 @@ input,textarea{user-select:text}
 .chart-wrap h4{font-size:12.5px;color:var(--text2);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
 .chart-box{height:220px;position:relative}
 
-/* FOTOS */
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .photo-item{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--card2);border:1px solid var(--border)}
 .photo-item img{width:100%;height:100%;object-fit:cover}
@@ -430,9 +426,6 @@ let tokenClient = null;
 let accessToken = null;
 let driveFileId = null;
 let syncTimeout = null;
-
-let googleInitIntentos = 0;
-
 let googleInitIntentos = 0;
 let autoReconectando = false;
 
@@ -473,7 +466,6 @@ function initGoogle(){
     googleInitIntentos = 0;
     console.log('Google OAuth listo');
 
-    // 🔄 Reconexión silenciosa si ya autorizó antes
     if(localStorage.getItem('driveAutorizado') === '1'){
       setTimeout(intentarReconexionSilenciosa, 800);
     }
@@ -487,9 +479,7 @@ function intentarReconexionSilenciosa(){
   if(!tokenClient || accessToken || autoReconectando) return;
   autoReconectando = true;
   setSyncStatus('syncing');
-  // prompt: '' hace que Google no muestre ventana si ya autorizó antes
   tokenClient.requestAccessToken({ prompt: '' });
-  // Si en 3 segundos no respondió, quitar el estado "syncing"
   setTimeout(()=>{
     if(!accessToken){
       autoReconectando = false;
@@ -498,29 +488,9 @@ function intentarReconexionSilenciosa(){
   }, 3000);
 }
 
-  // Google ya está listo: crear el tokenClient
-  try {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
-      callback: async (resp)=>{
-        if(resp.error){ setSyncStatus('err'); return; }
-        accessToken = resp.access_token;
-        setSyncStatus('on');
-        await sincronizar();
-      }
-    });
-    googleInitIntentos = 0;
-    console.log('Google OAuth listo');
-  } catch(e){
-    console.error('Error al inicializar Google:', e);
-    document.getElementById('syncDot').title = 'Error al inicializar Google';
-  }
-}
 function pedirToken(){
   if(!tokenClient){ toast('Configura GOOGLE_CLIENT_ID primero'); return; }
   setSyncStatus('syncing');
-  // prompt: 'consent' fuerza la ventana si es la primera vez
   tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
 }
 
@@ -544,7 +514,6 @@ async function driveFindFile(){
   if(res.status===401){
     accessToken=null;
     setSyncStatus('err');
-    // Intentar reconectar automáticamente
     setTimeout(intentarReconexionSilenciosa, 500);
     throw new Error('Token expirado');
   }
@@ -603,6 +572,7 @@ async function sincronizar(){
       const localTs = state._lastSaved || 0;
       if(remoteTs > localTs){
         state = { ...remote, _lastSaved: remoteTs };
+        if(localStorage.getItem('tutorialVisto') === '1') state.tutorialVisto = true;
         await guardarEnDexie();
         render();
         toast('Datos actualizados desde Drive');
@@ -625,90 +595,98 @@ async function sincronizar(){
 /* ============================================================
    EXPORTAR A EXCEL
    ============================================================ */
-function exportarExcel(){
-  try{
-    const wb = XLSX.utils.book_new();
-    const regs = [];
-    Object.entries(state.registros).forEach(([k,v])=>{
-  // Filtrar registros completamente vacíos
-  const tieneDatos = v.ambiente || v.produccion || v.sanidad || v.bienestar;
-  if(!tieneDatos) return;
-      const idx = k.lastIndexOf('_');
-      const loteId = k.slice(0, idx);
-      const fecha = k.slice(idx+1);
-      const lote = state.lotes.find(l=>l.id===loteId) || {nombre:loteId};
-      const row = { Fecha: fecha, Lote: lote.nombre };
-      if(v.ambiente){
-        Object.assign(row, {
-          'T° Mín': v.ambiente.tempMin, 'T° Máx': v.ambiente.tempMax, 'T° Prom': v.ambiente.tempProm,
-          'Hum Mín': v.ambiente.humMin, 'Hum Máx': v.ambiente.humMax, 'Hum Prom': v.ambiente.humProm,
-          'Amoniaco': v.ambiente.amoniaco, 'Ventilación': v.ambiente.ventilacion,
-          'Cama': v.ambiente.cama, 'Moscas': v.ambiente.moscas, 'Roedores': v.ambiente.roedores
-        });
-      }
-      if(v.produccion){
-        Object.assign(row, {
-          'Alimento (kg)': v.produccion.alimentoKg,
-          'Huevos': v.produccion.huevos,
-          'No aptos': v.produccion.noAptos,
-          'Peso aves (g)': v.produccion.pesoAves,
-          'Peso huevo (g)': v.produccion.pesoHuevo
-        });
-      }
-      if(v.sanidad){
-        Object.assign(row, {
-          'Muertas': v.sanidad.muertas,
-          'Enfermas': v.sanidad.enfermas,
-          'Descartadas': v.sanidad.descartadas,
-          'Causa': v.sanidad.causa
-        });
-      }
-      if(v.bienestar){
-        Object.assign(row, {
-          'Plumas': v.bienestar.plumas,
-          'Lesiones': v.bienestar.lesiones,
-          'Pododermatitis': v.bienestar.podo
-        });
-      }
-      regs.push(row);
-    });
-    regs.sort((a,b)=> (b.Fecha||'').localeCompare(a.Fecha||''));
-    if(regs.length){
-      const ws1 = XLSX.utils.json_to_sheet(regs);
-      XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
-    }
-    if(state.eventos.length){
-      const evs = state.eventos.map(e=>{
-        const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
-        return {
-          Fecha: e.fecha ? new Date(e.fecha).toLocaleString('es-MX') : '',
-          Lote: lote.nombre,
-          Tipo: e.tipo, Subtipo: e.subtipo,
-          Producto: e.producto, Dosis: e.dosis,
-          'Días retiro': e.retiro,
-          Responsable: e.responsable, Motivo: e.motivo
-        };
+function construirWorkbookExcel(){
+  const wb = XLSX.utils.book_new();
+
+  const regs = [];
+  Object.entries(state.registros).forEach(([k,v])=>{
+    const tieneDatos = v.ambiente || v.produccion || v.sanidad || v.bienestar;
+    if(!tieneDatos) return;
+    const idx = k.lastIndexOf('_');
+    const loteId = k.slice(0, idx);
+    const fecha = k.slice(idx+1);
+    const lote = state.lotes.find(l=>l.id===loteId) || {nombre:loteId};
+    const row = { Fecha: fecha, Lote: lote.nombre };
+    if(v.ambiente){
+      Object.assign(row, {
+        'T° Mín': v.ambiente.tempMin, 'T° Máx': v.ambiente.tempMax, 'T° Prom': v.ambiente.tempProm,
+        'Hum Mín': v.ambiente.humMin, 'Hum Máx': v.ambiente.humMax, 'Hum Prom': v.ambiente.humProm,
+        'Amoniaco': v.ambiente.amoniaco, 'Ventilación': v.ambiente.ventilacion,
+        'Cama': v.ambiente.cama, 'Moscas': v.ambiente.moscas, 'Roedores': v.ambiente.roedores
       });
-      const ws2 = XLSX.utils.json_to_sheet(evs);
-      XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
     }
-    const resumen = state.lotes.map(l=>{
-      const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
-      const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
-      const totalMuertas = regsLote.reduce((s,[,v])=> s + (v.sanidad?.muertas||0), 0);
+    if(v.produccion){
+      Object.assign(row, {
+        'Alimento (kg)': v.produccion.alimentoKg,
+        'Huevos': v.produccion.huevos,
+        'No aptos': v.produccion.noAptos,
+        'Peso aves (g)': v.produccion.pesoAves,
+        'Peso huevo (g)': v.produccion.pesoHuevo
+      });
+    }
+    if(v.sanidad){
+      Object.assign(row, {
+        'Muertas': v.sanidad.muertas,
+        'Enfermas': v.sanidad.enfermas,
+        'Descartadas': v.sanidad.descartadas,
+        'Causa': v.sanidad.causa
+      });
+    }
+    if(v.bienestar){
+      Object.assign(row, {
+        'Plumas': v.bienestar.plumas,
+        'Lesiones': v.bienestar.lesiones,
+        'Pododermatitis': v.bienestar.podo
+      });
+    }
+    regs.push(row);
+  });
+  regs.sort((a,b)=> (b.Fecha||'').localeCompare(a.Fecha||''));
+  if(regs.length){
+    const ws1 = XLSX.utils.json_to_sheet(regs);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+  }
+
+  if(state.eventos.length){
+    const evs = state.eventos.map(e=>{
+      const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
       return {
-        Lote: l.nombre,
-        Etapa: l.etapa,
-        Semana: l.semana,
-        'Aves actuales': l.avesActuales,
-        'Días registrados': regsLote.length,
-        'Total huevos': totalHuevos,
-        'Total muertas': totalMuertas,
-        'Mortalidad %': l.avesIniciales ? ((totalMuertas/l.avesIniciales)*100).toFixed(2) : 0
+        Fecha: e.fecha ? new Date(e.fecha).toLocaleString('es-MX') : '',
+        Lote: lote.nombre,
+        Tipo: e.tipo, Subtipo: e.subtipo,
+        Producto: e.producto, Dosis: e.dosis,
+        'Días retiro': e.retiro,
+        Responsable: e.responsable, Motivo: e.motivo
       };
     });
-    const ws3 = XLSX.utils.json_to_sheet(resumen);
-    XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+    const ws2 = XLSX.utils.json_to_sheet(evs);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
+  }
+
+  const resumen = state.lotes.map(l=>{
+    const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
+    const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
+    const totalMuertas = regsLote.reduce((s,[,v])=> s + (v.sanidad?.muertas||0), 0);
+    return {
+      Lote: l.nombre,
+      Etapa: l.etapa,
+      Semana: l.semana,
+      'Aves actuales': l.avesActuales,
+      'Días registrados': regsLote.length,
+      'Total huevos': totalHuevos,
+      'Total muertas': totalMuertas,
+      'Mortalidad %': l.avesIniciales ? ((totalMuertas/l.avesIniciales)*100).toFixed(2) : 0
+    };
+  });
+  const ws3 = XLSX.utils.json_to_sheet(resumen);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+
+  return wb;
+}
+
+function exportarExcel(){
+  try{
+    const wb = construirWorkbookExcel();
     XLSX.writeFile(wb, `bitacora_${HOY()}.xlsx`);
     toast('Excel exportado ✓');
   }catch(e){ console.error(e); toast('Error al exportar'); }
@@ -971,7 +949,7 @@ function resumenSeccion(k, d, l){
 }
 
 /* ============================================================
-   VISTA: HISTORIAL (con tabs + gráficas)
+   VISTA: HISTORIAL
    ============================================================ */
 function viewHistorial(){
   const tabsHtml = `
@@ -1164,15 +1142,19 @@ function viewAjustes(){
         <span class="lbl">📊 Exportar a Excel (.xlsx)</span>
         <span class="val chev"></span>
       </div>
-            <div class="setting-row" data-act="exportExcelDrive">
+      <div class="setting-row" data-act="exportExcelDrive">
         <span class="lbl">☁️ Respaldar Excel a Drive</span>
+        <span class="val chev"></span>
+      </div>
+      <div class="setting-row" data-act="exportPDF">
+        <span class="lbl">📄 Reporte PDF del mes</span>
         <span class="val chev"></span>
       </div>
       <div class="setting-row" data-act="exportJSON">
         <span class="lbl">💾 Exportar copia (JSON)</span>
         <span class="val chev"></span>
       </div>
-            ${state.ajustes.ultimoBackupDrive ? `
+      ${state.ajustes.ultimoBackupDrive ? `
         <div class="setting-row">
           <span class="lbl" style="font-size:12px;color:var(--text3)">Último backup a Drive</span>
           <span class="val" style="font-size:11px">${new Date(state.ajustes.ultimoBackupDrive).toLocaleString('es-MX')}</span>
@@ -1229,7 +1211,7 @@ function viewAjustes(){
     </div>
 
     <div style="text-align:center;color:var(--text3);font-size:11.5px;margin-top:24px;line-height:1.6">
-      Bitácora Avícola · v2.2<br>
+      Bitácora Avícola · v2.3<br>
       Datos locales + Google Drive
     </div>
   `;
@@ -2066,7 +2048,8 @@ function eventoAdmin(){
    ACCIONES DE AJUSTES
    ============================================================ */
 function accionAjuste(act){
-   if(act==='exportExcelDrive'){ exportarExcelADrive(); }
+  if(act==='exportExcel'){ exportarExcel(); }
+  if(act==='exportExcelDrive'){ exportarExcelADrive(); }
   if(act==='exportPDF'){ exportarPDF(); }
   if(act==='exportJSON'){
     const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -2094,7 +2077,7 @@ function accionAjuste(act){
     input.click();
   }
   if(act==='tutorial'){ iniciarTutorial(true); }
-     if(act==='reset'){
+  if(act==='reset'){
     if(confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')){
       db.delete().then(()=>{
         localStorage.removeItem('bitacora_avicola_v2');
@@ -2108,7 +2091,7 @@ function accionAjuste(act){
     if(accessToken) sincronizar();
     else pedirToken();
   }
-   if(act==='disconnect'){
+  if(act==='disconnect'){
     accessToken = null;
     driveFileId = null;
     localStorage.removeItem('driveAutorizado');
@@ -2272,7 +2255,6 @@ const TUTORIAL_PASOS = [
 let tutPaso = 0;
 
 function iniciarTutorial(forzar){
-  // Verificación doble: state + localStorage (por si Drive sobrescribe)
   const lsVisto = localStorage.getItem('tutorialVisto') === '1';
   if(!forzar && (state.tutorialVisto || lsVisto)) return;
   tutPaso = 0;
@@ -2310,45 +2292,16 @@ document.getElementById('tutNext').onclick = ()=>{
 function cerrarTutorial(){
   document.getElementById('tutBg').classList.remove('open');
   state.tutorialVisto = true;
-  // Doble respaldo: localStorage (síncrono) + state (Dexie/Drive)
   localStorage.setItem('tutorialVisto', '1');
   save();
 }
 
-/* ============================================================
-   INICIALIZACIÓN
-   ============================================================ */
-(async function init(){
-  try{
-    await inicializarDB();
-    state = await cargarDesdeDexie();
-  }catch(e){
-    console.error('Error inicial:', e);
-    const ls = localStorage.getItem('bitacora_avicola_v2');
-    state = ls ? JSON.parse(ls) : {
-      lotes: DEFAULT_LOTES, loteActual: 'g3', registros: {}, eventos: [],
-      ajustes: { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1, notifActivas:false, notifHora:8 },
-      tutorialVisto: false,
-      _lastSaved: 0
-    };
-  }
-   // Sincronizar tutorialVisto desde localStorage si Dexie lo perdió
-  if(localStorage.getItem('tutorialVisto') === '1'){
-    state.tutorialVisto = true;
-  }
-  aplicarTema();
-  render();
-  setTimeout(initGoogle, 500);
-  setTimeout(()=> iniciarTutorial(), 1200);
-  setTimeout(programarNotificacion, 2000);
-})();
 /* ============================================================
    RESPALDO DE EXCEL A GOOGLE DRIVE
    ============================================================ */
 let backupFolderId = null;
 
 async function buscarOCrearCarpetaBackups(){
-  // Buscar carpeta existente
   const q = encodeURIComponent("name='Bitacora Avicola Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
@@ -2358,7 +2311,6 @@ async function buscarOCrearCarpetaBackups(){
   if(data.files && data.files.length > 0){
     return data.files[0].id;
   }
-  // Crear la carpeta
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers:{
@@ -2374,98 +2326,9 @@ async function buscarOCrearCarpetaBackups(){
   return nueva.id;
 }
 
-function generarExcelBlob(){
-  const wb = XLSX.utils.book_new();
-
-  // Hoja: Registros
-  const regs = [];
-  Object.entries(state.registros).forEach(([k,v])=>{
-    const tieneDatos = v.ambiente || v.produccion || v.sanidad || v.bienestar;
-    if(!tieneDatos) return;
-    const idx = k.lastIndexOf('_');
-    const loteId = k.slice(0, idx);
-    const fecha = k.slice(idx+1);
-    const lote = state.lotes.find(l=>l.id===loteId) || {nombre:loteId};
-    const row = { Fecha: fecha, Lote: lote.nombre };
-    if(v.ambiente){
-      Object.assign(row, {
-        'T° Mín': v.ambiente.tempMin, 'T° Máx': v.ambiente.tempMax, 'T° Prom': v.ambiente.tempProm,
-        'Hum Mín': v.ambiente.humMin, 'Hum Máx': v.ambiente.humMax, 'Hum Prom': v.ambiente.humProm,
-        'Amoniaco': v.ambiente.amoniaco, 'Ventilación': v.ambiente.ventilacion,
-        'Cama': v.ambiente.cama, 'Moscas': v.ambiente.moscas, 'Roedores': v.ambiente.roedores
-      });
-    }
-    if(v.produccion){
-      Object.assign(row, {
-        'Alimento (kg)': v.produccion.alimentoKg,
-        'Huevos': v.produccion.huevos,
-        'No aptos': v.produccion.noAptos,
-        'Peso aves (g)': v.produccion.pesoAves,
-        'Peso huevo (g)': v.produccion.pesoHuevo
-      });
-    }
-    if(v.sanidad){
-      Object.assign(row, {
-        'Muertas': v.sanidad.muertas,
-        'Enfermas': v.sanidad.enfermas,
-        'Descartadas': v.sanidad.descartadas,
-        'Causa': v.sanidad.causa
-      });
-    }
-    if(v.bienestar){
-      Object.assign(row, {
-        'Plumas': v.bienestar.plumas,
-        'Lesiones': v.bienestar.lesiones,
-        'Pododermatitis': v.bienestar.podo
-      });
-    }
-    regs.push(row);
-  });
-  regs.sort((a,b)=> (b.Fecha||'').localeCompare(a.Fecha||''));
-  if(regs.length){
-    const ws1 = XLSX.utils.json_to_sheet(regs);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
-  }
-
-  // Hoja: Eventos
-  if(state.eventos.length){
-    const evs = state.eventos.map(e=>{
-      const lote = state.lotes.find(l=>l.id===e.loteId) || {nombre:e.loteId};
-      return {
-        Fecha: e.fecha ? new Date(e.fecha).toLocaleString('es-MX') : '',
-        Lote: lote.nombre,
-        Tipo: e.tipo, Subtipo: e.subtipo,
-        Producto: e.producto, Dosis: e.dosis,
-        'Días retiro': e.retiro,
-        Responsable: e.responsable, Motivo: e.motivo
-      };
-    });
-    const ws2 = XLSX.utils.json_to_sheet(evs);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Eventos');
-  }
-
-  // Hoja: Resumen
-  const resumen = state.lotes.map(l=>{
-    const regsLote = Object.entries(state.registros).filter(([k])=> k.startsWith(l.id+'_'));
-    const totalHuevos = regsLote.reduce((s,[,v])=> s + (v.produccion?.huevos||0), 0);
-    const totalMuertas = regsLote.reduce((s,[,v])=> s + (v.sanidad?.muertas||0), 0);
-    return {
-      Lote: l.nombre,
-      Etapa: l.etapa,
-      Semana: l.semana,
-      'Aves actuales': l.avesActuales,
-      'Días registrados': regsLote.length,
-      'Total huevos': totalHuevos,
-      'Total muertas': totalMuertas,
-      'Mortalidad %': l.avesIniciales ? ((totalMuertas/l.avesIniciales)*100).toFixed(2) : 0
-    };
-  });
-  const ws3 = XLSX.utils.json_to_sheet(resumen);
-  XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
-
-  // Convertir a base64
-  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'base64' });
-  return wbout;
+function generarExcelBase64(){
+  const wb = construirWorkbookExcel();
+  return XLSX.write(wb, { bookType:'xlsx', type:'base64' });
 }
 
 async function exportarExcelADrive(){
@@ -2475,22 +2338,16 @@ async function exportarExcelADrive(){
   }
   setSyncStatus('syncing');
   try{
-    // 1. Generar el Excel
-    const base64 = generarExcelBlob();
-
-    // 2. Buscar/crear carpeta
+    const base64 = generarExcelBase64();
     if(!backupFolderId){
       backupFolderId = await buscarOCrearCarpetaBackups();
     }
-
-    // 3. Subir el archivo
     const nombreArchivo = `bitacora_${HOY()}.xlsx`;
     const metadata = {
       name: nombreArchivo,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       parents: [backupFolderId]
     };
-
     const boundary = '----bitacora_xlsx_' + Date.now();
     const body =
       '--' + boundary + '\r\n' +
@@ -2526,6 +2383,34 @@ async function exportarExcelADrive(){
     toast('Error al respaldar en Drive');
   }
 }
+
+/* ============================================================
+   INICIALIZACIÓN
+   ============================================================ */
+(async function init(){
+  try{
+    await inicializarDB();
+    state = await cargarDesdeDexie();
+  }catch(e){
+    console.error('Error inicial:', e);
+    const ls = localStorage.getItem('bitacora_avicola_v2');
+    state = ls ? JSON.parse(ls) : {
+      lotes: DEFAULT_LOTES, loteActual: 'g3', registros: {}, eventos: [],
+      ajustes: { dark:false, umbralMort:0.1, almacenaHuevos:true, pesoDia:1, notifActivas:false, notifHora:8 },
+      tutorialVisto: false,
+      _lastSaved: 0
+    };
+  }
+  if(localStorage.getItem('tutorialVisto') === '1'){
+    state.tutorialVisto = true;
+  }
+  aplicarTema();
+  render();
+  setTimeout(initGoogle, 500);
+  setTimeout(()=> iniciarTutorial(), 1200);
+  setTimeout(programarNotificacion, 2000);
+})();
+
 /* ============================================================
    SERVICE WORKER con auto-actualización
    ============================================================ */
