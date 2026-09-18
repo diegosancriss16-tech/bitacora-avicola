@@ -428,7 +428,8 @@ let driveFileId = null;
 let syncTimeout = null;
 let googleInitIntentos = 0;
 let autoReconectando = false;
-
+let tokenExpiraEn = 0;
+let renovacionTimer = null;
 function initGoogle(){
   if(GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')){
     document.getElementById('syncDot').title = 'Configura tu GOOGLE_CLIENT_ID';
@@ -450,16 +451,18 @@ function initGoogle(){
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file',
-      callback: async (resp)=>{
+            callback: async (resp)=>{
         if(resp.error){
           setSyncStatus('err');
           autoReconectando = false;
           return;
         }
         accessToken = resp.access_token;
+        tokenExpiraEn = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3540000);
         localStorage.setItem('driveAutorizado', '1');
         setSyncStatus('on');
         autoReconectando = false;
+        programarRenovacionToken();
         await sincronizar();
       }
     });
@@ -476,16 +479,73 @@ function initGoogle(){
 }
 
 function intentarReconexionSilenciosa(){
-  if(!tokenClient || accessToken || autoReconectando) return;
+  if(!tokenClient || autoReconectando) return;
   autoReconectando = true;
   setSyncStatus('syncing');
-  tokenClient.requestAccessToken({ prompt: '' });
-  setTimeout(()=>{
-    if(!accessToken){
-      autoReconectando = false;
-      setSyncStatus(null);
-    }
-  }, 3000);
+  try{
+    tokenClient.requestAccessToken({ prompt: '' });
+    setTimeout(()=>{
+      if(!accessToken){
+        // Falló la reconexión silenciosa
+        autoReconectando = false;
+        setSyncStatus('err');
+        mostrarBannerReconexion();
+      } else {
+        autoReconectando = false;
+      }
+    }, 4000);
+  }catch(e){
+    console.error('Error reconexión:', e);
+    autoReconectando = false;
+    setSyncStatus('err');
+    mostrarBannerReconexion();
+  }
+}
+
+function mostrarBannerReconexion(){
+  const previo = document.getElementById('reconnectBanner');
+  if(previo) return;
+  const banner = document.createElement('div');
+  banner.id = 'reconnectBanner';
+  banner.innerHTML = `
+    <div style="
+      position:fixed;top:0;left:50%;transform:translateX(-50%);
+      width:100%;max-width:520px;
+      background:#FF9800;color:#fff;
+      padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;
+      z-index:9999;gap:10px;
+      box-shadow:0 2px 12px rgba(0,0,0,.25);
+      font-family:inherit;font-size:13px;font-weight:500;
+    ">
+      <span style="flex:1">⚠️ La conexión con Drive expiró</span>
+      <button id="reconnectNow" style="
+        background:#fff;color:#FF9800;border:none;border-radius:8px;
+        padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;
+      ">Reconectar</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById('reconnectNow').onclick = ()=>{
+    banner.remove();
+    pedirToken();
+  };
+  // Auto-eliminar a los 15 segundos si no interactúa
+  setTimeout(()=>{ if(banner.parentNode) banner.remove(); }, 15000);
+}
+  function programarRenovacionToken(){
+  clearTimeout(renovacionTimer);
+  if(!tokenExpiraEn) return;
+  // Renovar 3 minutos antes de que expire
+  const faltan = tokenExpiraEn - Date.now() - 180000;
+  if(faltan <= 0){
+    intentarReconexionSilenciosa();
+    return;
+  }
+  renovacionTimer = setTimeout(()=>{
+    if(!accessToken) return;
+    intentarReconexionSilenciosa();
+  }, faltan);
 }
 
 function pedirToken(){
@@ -511,10 +571,17 @@ async function driveFindFile(){
     `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,name,modifiedTime)`,
     { headers:{ Authorization:'Bearer '+accessToken } }
   );
-  if(res.status===401){
+   if(res.status===401){
     accessToken=null;
     setSyncStatus('err');
-    setTimeout(intentarReconexionSilenciosa, 500);
+    // Intentar reconexión silenciosa; si falla, mostrar banner
+    setTimeout(()=>{
+      intentarReconexionSilenciosa();
+      // Si tras 5 segundos no hay token, mostrar banner
+      setTimeout(()=>{
+        if(!accessToken) mostrarBannerReconexion();
+      }, 5000);
+    }, 500);
     throw new Error('Token expirado');
   }
   const data = await res.json();
@@ -2408,7 +2475,24 @@ async function exportarExcelADrive(){
   render();
   setTimeout(initGoogle, 500);
   setTimeout(()=> iniciarTutorial(), 1200);
-  setTimeout(programarNotificacion, 2000);
+   setTimeout(programarNotificacion, 2000);
+
+  // Al volver a la app, verificar si el token sigue válido
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && localStorage.getItem('driveAutorizado') === '1'){
+      if(!accessToken || (tokenExpiraEn && Date.now() > tokenExpiraEn - 60000)){
+        console.log('App volvió al frente, verificando conexión...');
+        setTimeout(intentarReconexionSilenciosa, 300);
+      }
+    }
+  });
+
+  // Verificación periódica cada 30 minutos (por si acaso)
+  setInterval(()=>{
+    if(localStorage.getItem('driveAutorizado') === '1' && !accessToken){
+      intentarReconexionSilenciosa();
+    }
+  }, 1800000);
 })();
 
 /* ============================================================
